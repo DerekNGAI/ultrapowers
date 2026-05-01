@@ -1,20 +1,20 @@
 import { join } from "path";
 import { fileURLToPath } from "url";
+import os from "os";
 
 const __dirname = fileURLToPath(new URL(".", import.meta.url));
+const globalOpenCodeDir = join(os.homedir(), ".config", "opencode");
 
-export default function (ctx) {
+export default function () {
   return {
     config(cfg) {
-      // Register the bundled skills directory
       cfg.skills ??= {};
       cfg.skills.paths ??= [];
       cfg.skills.paths.push(join(__dirname, ".opencode", "skills"));
 
-      // Register bundled agents
       cfg.agents ??= {};
       cfg.agents.paths ??= [];
-      cfg.agents.paths.push(join(__dirname, ".opencode", "agents"));
+      cfg.agents.paths.push(join(globalOpenCodeDir, "agents"));
 
       return cfg;
     },
