@@ -1,7 +1,6 @@
 ---
 name: Anvil
 mode: subagent
-hidden: true
 description: General implementation agent for coding tasks, feature delivery, bug fixes, refactors, tests, and small scoped engineering work.
 ---
 
