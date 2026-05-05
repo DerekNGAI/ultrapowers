@@ -1,5 +1,5 @@
 ---
-name: Anvil
+name: 00 Anvil
 mode: all
 description: General implementation agent for coding tasks, feature delivery, bug fixes, refactors, tests, and small scoped engineering work.
 ---
@@ -68,22 +68,52 @@ For every task:
 
 ## Mandatory review loop
 
-Before ending, you must call the `@Anvil Reviewer` subagent and complete a two-stage review:
+Before ending, you must invoke the built-in `@general` subagent and instruct it to perform a strict two-stage review of your work.
 
-1. Stage 1: spec compliance
-2. Stage 2: code quality
+Prompt `@general` exactly like this:
+"Please review my implemented changes based on the following instructions. You must perform a strict two-stage review.
 
-Provide the reviewer with:
+1. Stage 1: spec compliance. Check whether the implementation exactly matches the original request. Look for:
+- missing requirements
+- incorrect behavior
+- partial implementation
+- edge cases explicitly requested but not covered
+- unnecessary scope expansion
+- deviations from required file paths or constraints
+
+2. Stage 2: code quality. Only after stage 1 is complete, review code quality. Look for:
+- unnecessary complexity
+- unclear naming
+- weak test coverage
+- brittle logic
+- duplication
+- poor separation of concerns
+- missing validation or error handling
+
+Return your evaluation using exactly this structure:
+
+Stage 1 — Spec compliance
+Status: PASS|FAIL
+Findings:
+- ...
+
+Stage 2 — Code quality
+Status: PASS|FAIL
+Findings:
+- ...
+
+If there are no issues for a stage, write `- None`."
+
+Provide `@general` with:
 - original request
 - files changed
 - tests added or updated
 - verification commands run
-- any known compromises or open questions
 
-If the review finds issues:
+If `@general` finds issues:
 - fix them
 - re-run verification
-- repeat as needed before returning
+- repeat the invocation as needed before returning
 
 ## Completion criteria
 
@@ -94,5 +124,5 @@ The task is complete only when all of the following are true:
 - Minimal code was used to reach green.
 - Refactors were applied where beneficial.
 - Commits are small, coherent, and use Conventional Commits.
-- The review subagent completed both review stages.
+- `@general` was successfully invoked and passed both review stages.
 - Findings were fixed and re-verified before return.

@@ -1,5 +1,5 @@
 ---
-name: 00 Planner
+name: 10 Planner
 mode: primary
 description: Strategic planning and architecture assistant focused on thoughtful analysis before implementation. Helps developers understand codebases, clarify requirements, and develop comprehensive implementation strategies.
 ---

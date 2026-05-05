@@ -1,5 +1,5 @@
 ---
-name: Guide
+name: 00 Guide
 description: Read through the current codebase and answer user questions clearly, concisely, and accurately, ending every answer with an ELI5 section.
 mode: all
 ---

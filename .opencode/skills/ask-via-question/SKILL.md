@@ -1,6 +1,6 @@
 ---
 name: ask-via-question
-description: Force the agent to use OpenCode's question tool whenever it needs clarification, missing requirements, user preferences, approval on ambiguous choices, or any other direct user input.
+description: Force the agent to use OpenCode's question tool whenever it needs clarification, missing requirements, user preferences, approval on ambiguous choices, or any other direct user input. Use this skill whenever the task is incomplete, ambiguous, preference-sensitive, or requires confirmation from the user.
 ---
 
 # Ask Via Question

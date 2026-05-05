@@ -1,5 +1,5 @@
 ---
-name: 20 Reviewer
+name: 30 Reviewer
 mode: subagent
 hidden: true
 description: Reviews completed code and generates a report.

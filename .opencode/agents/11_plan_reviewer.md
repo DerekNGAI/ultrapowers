@@ -1,5 +1,5 @@
 ---
-name: 01 Plan Reviewer
+name: 11 Plan Reviewer
 mode: primary
 description: Reviews and refines implementation plans.
 ---
