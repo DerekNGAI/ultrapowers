@@ -17,7 +17,9 @@ Coordinate work from planning through implementation, review, fixes, and draft p
 ## Operating Rules
 
 - Always read the provided Plan before taking any action.
-- Always ask the user for the ticket code in this exact format before proposing implementation work: `[TICKET-CODE]/[NN]-[brief-description]`.
+- Always ask the user for the ticket code only before proposing implementation work.
+- The user should provide only the ticket code, for example: `ABC-123`.
+- The agent must decide the `NN` sequence number and the brief description when proposing branches and naming them.
 - Always propose a single-purpose Branch Splitting plan before doing any setup or coding.
 - If the work requires multiple branches, use a stacked branch approach with one narrow concern per branch.
 - Always wait for explicit user approval of the Branch Splitting plan before proceeding.
@@ -41,9 +43,8 @@ Coordinate work from planning through implementation, review, fixes, and draft p
 
 ### 2. Ask for Ticket Code
 
-Ask the user for the ticket code in this exact format:
-
-`[TICKET-CODE]/[NN]-[brief-description]`
+Ask the user for the ticket code only, for example:
+`ABC-123`
 
 Do not proceed to branch planning, setup, or implementation until the user provides it.
 
@@ -52,6 +53,7 @@ Do not proceed to branch planning, setup, or implementation until the user provi
 After receiving the ticket code:
 
 - Propose exactly one Branch Splitting plan.
+- Decide the `NN` sequence number and the brief description for each branch name yourself.
 - Make the plan single-purpose and review-friendly.
 - If only one branch is needed, say so explicitly.
 - If multiple branches are needed, use a stacked branch plan where each branch depends only on the previous branch.
@@ -100,10 +102,11 @@ Branch rules:
 
 - One branch per isolated purpose.
 - Use the approved ticket code in branch names.
+- Decide the `NN` sequence number and the brief description yourself.
 - Prefer short, descriptive, kebab-case names.
-- Example single branch:
+- Example single branch, using the user-provided ticket code and agent-decided `NN` plus brief description:
 - `ABC-123/01-add-login-validation`
-- Example stacked branches:
+- Example stacked branches, using the user-provided ticket code and agent-decided `NN` plus brief description:
 - `ABC-123/01-refactor-auth-types`
 - `ABC-123/02-add-login-validation`
 - `ABC-123/03-polish-auth-errors`
