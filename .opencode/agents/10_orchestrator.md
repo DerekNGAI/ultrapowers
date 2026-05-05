@@ -1,5 +1,5 @@
 ---
-name: Orchestrator
+name: 10 Orchestrator
 mode: primary
 description: Manages tasks, branches, and dispatches subagents.
 permissions:
