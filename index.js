@@ -1,19 +1,36 @@
 import { join } from "path";
 import { fileURLToPath } from "url";
-import { readFileSync, existsSync } from "fs";
+import { existsSync, readFileSync } from "fs";
 
 const __dirname = fileURLToPath(new URL(".", import.meta.url));
 
-function loadPackageConfig() {
-  const configPath = join(__dirname, "opencode.json");
+function loadJSONConfig() {
+  const file = join(__dirname, "opencode.json");
+  if (!existsSync(file)) return {};
 
-  if (!existsSync(configPath)) return {};
+  const raw = readFileSync(file, "utf8");
+  return JSON.parse(raw);
+}
 
-  try {
-    return JSON.parse(readFileSync(configPath, "utf8"));
-  } catch (error) {
-    throw new Error(`Failed to parse ultrapowers opencode.json: ${error.message}`);
+function resolveFileRefs(value) {
+  if (typeof value === "string") {
+    return value.replace(/\{file:([^}]+)\}/g, (_, p) => {
+      const abs = join(__dirname, p);
+      return `{file:${abs}}`;
+    });
   }
+
+  if (Array.isArray(value)) {
+    return value.map(resolveFileRefs);
+  }
+
+  if (value && typeof value === "object") {
+    return Object.fromEntries(
+      Object.entries(value).map(([k, v]) => [k, resolveFileRefs(v)])
+    );
+  }
+
+  return value;
 }
 
 export default function ultrapowers() {
@@ -40,29 +57,20 @@ export default function ultrapowers() {
         cfg.agents.paths.push(agentsPath);
       }
 
-      const packageConfig = loadPackageConfig();
+      const packaged = resolveFileRefs(loadJSONConfig());
 
-      if (packageConfig.agent) {
-        for (const [name, agentDef] of Object.entries(packageConfig.agent)) {
-          cfg.agent[name] = {
-            ...agentDef,
-            ...(agentDef.prompt
-              ? {
-                  prompt: agentDef.prompt.replace(
-                    "{file:",
-                    `{file:${__dirname}/`
-                  ),
-                }
-              : {}),
-          };
-        }
+      if (packaged.agent) {
+        cfg.agent = {
+          ...packaged.agent,
+          ...cfg.agent
+        };
       }
 
-      if (packageConfig.default_agent && !cfg.default_agent) {
-        cfg.default_agent = packageConfig.default_agent;
+      if (packaged.default_agent && !cfg.default_agent) {
+        cfg.default_agent = packaged.default_agent;
       }
 
       return cfg;
-    },
+    }
   };
 }
