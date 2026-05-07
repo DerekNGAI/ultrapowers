@@ -1,8 +1,9 @@
-import { join } from "path";
+import { join, dirname } from "path";
 import { fileURLToPath } from "url";
 import { existsSync, readFileSync, appendFileSync } from "fs";
 
-const __dirname = fileURLToPath(new URL(".", import.meta.url));
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = dirname(__filename);
 
 function debugLog(...args) {
   const timestamp = new Date().toISOString();
@@ -34,29 +35,35 @@ function loadJSONConfig() {
     }
   }
 
-  debugLog("[DEBUG] opencode.json NOT FOUND in any location");
+  debugLog("[DEBUG] opencode.json NOT FOUND");
   return {};
 }
 
 function resolveFileRefs(value) {
   if (typeof value === "string") {
     return value.replace(/\{file:([^}]+)\}/g, (_, p) => {
-      const abs = join(__dirname, p);
-      debugLog(`[DEBUG] Resolving file reference: ${p} → ${abs}`);
+      // Try multiple possible locations
+      const candidates = [
+        join(__dirname, p),                    // Standard
+        join(__dirname, "prompts", p),         // If prompts/ is missing in path
+        join(__dirname, ".opencode", p),       // Alternative structure
+      ];
 
-      if (existsSync(abs)) {
-        try {
-          const content = readFileSync(abs, "utf8").trim();
-          debugLog(`[DEBUG] Successfully read prompt file (${content.length} characters)`);
-          return content;                    // Inline the actual prompt content
-        } catch (e) {
-          debugLog(`[ERROR] Failed to read ${abs}:`, e.message);
-          return `{file:${p}} (read failed)`;
+      for (const abs of candidates) {
+        debugLog(`[DEBUG] Trying prompt path: ${abs}`);
+        if (existsSync(abs)) {
+          try {
+            const content = readFileSync(abs, "utf8").trim();
+            debugLog(`[SUCCESS] Loaded prompt: ${p} (${content.length} chars)`);
+            return content;
+          } catch (e) {
+            debugLog(`[ERROR] Read failed for ${abs}`);
+          }
         }
-      } else {
-        debugLog(`[WARN] Prompt file not found: ${abs}`);
-        return `{file:${p}} (not found)`;
       }
+
+      debugLog(`[WARN] Prompt file not found: ${p}`);
+      return `{file:${p}} (not found)`;
     });
   }
 
@@ -98,24 +105,11 @@ export default function ultrapowers() {
       const packaged = resolveFileRefs(loadJSONConfig());
 
       debugLog("=== Ultrapowers Config Debug ===");
-      debugLog("Raw loaded from opencode.json:", JSON.stringify(packaged, null, 2));
       debugLog("Resolved agents with prompts:", JSON.stringify(packaged.agent || {}, null, 2));
 
       if (packaged.agent) {
-        debugLog("Merging agents into cfg...");
-        cfg.agent = {
-          ...cfg.agent,
-          ...packaged.agent
-        };
-
-        cfg.agents.custom = {
-          ...cfg.agents.custom,
-          ...packaged.agent
-        };
-      }
-
-      if (packaged.default_agent && !cfg.default_agent) {
-        cfg.default_agent = packaged.default_agent;
+        cfg.agent = { ...cfg.agent, ...packaged.agent };
+        cfg.agents.custom = { ...cfg.agents.custom, ...packaged.agent };
       }
 
       debugLog("Final merged cfg.agent:", JSON.stringify(cfg.agent, null, 2));
