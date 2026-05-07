@@ -47,7 +47,7 @@ export default function ultrapowers() {
       cfg.agent ??= {};
 
       const skillsPath = join(__dirname, ".opencode", "skills");
-      const agentsPath = join(__dirname, ".opencode", "agents");
+      const agentsPath = join(__dirname, ".opencode", "prompts");
 
       if (!cfg.skills.paths.includes(skillsPath)) {
         cfg.skills.paths.push(skillsPath);
