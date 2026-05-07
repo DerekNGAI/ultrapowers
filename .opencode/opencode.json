@@ -1,0 +1,13 @@
+{
+  "$schema": "https://opencode.ai/config.json",
+  "agent": {
+    "ultrapowers-planner": {
+      "mode": "primary",
+      "prompt": "{file:.opencode/prompts/planner.md}"
+    },
+    "ultrapowers-reviewer": {
+      "mode": "secondary",
+      "prompt": "{file:.opencode/prompts/reviewer.md}"
+    }
+  }
+}
