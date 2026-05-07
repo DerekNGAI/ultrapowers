@@ -10,9 +10,7 @@ function debugLog(...args) {
   try {
     appendFileSync(join(__dirname, "ultrapowers-debug.log"), message);
     console.log(...args);
-  } catch (e) {
-    // silent fallback
-  }
+  } catch (e) {}
 }
 
 function loadJSONConfig() {
@@ -44,16 +42,21 @@ function resolveFileRefs(value) {
   if (typeof value === "string") {
     return value.replace(/\{file:([^}]+)\}/g, (_, p) => {
       const abs = join(__dirname, p);
+      debugLog(`[DEBUG] Resolving file reference: ${p} → ${abs}`);
+
       if (existsSync(abs)) {
         try {
-          return readFileSync(abs, "utf8");
+          const content = readFileSync(abs, "utf8").trim();
+          debugLog(`[DEBUG] Successfully read prompt file (${content.length} characters)`);
+          return content;                    // Inline the actual prompt content
         } catch (e) {
-          debugLog(`[ERROR] Could not read file: ${abs}`);
-          return `{file:${p}} (failed to load)`;
+          debugLog(`[ERROR] Failed to read ${abs}:`, e.message);
+          return `{file:${p}} (read failed)`;
         }
+      } else {
+        debugLog(`[WARN] Prompt file not found: ${abs}`);
+        return `{file:${p}} (not found)`;
       }
-      debugLog(`[WARN] File reference not found: ${abs}`);
-      return `{file:${p}}`;
     });
   }
 
@@ -84,12 +87,10 @@ export default function ultrapowers() {
       const skillsPath = join(__dirname, ".opencode", "skills");
       const agentsPath = join(__dirname, ".opencode", "agents");
 
-      // Add skills path
       if (!cfg.skills.paths.includes(skillsPath)) {
         cfg.skills.paths.push(skillsPath);
       }
 
-      // Add agents path only if folder exists
       if (existsSync(agentsPath) && !cfg.agents.paths.includes(agentsPath)) {
         cfg.agents.paths.push(agentsPath);
       }
@@ -97,11 +98,11 @@ export default function ultrapowers() {
       const packaged = resolveFileRefs(loadJSONConfig());
 
       debugLog("=== Ultrapowers Config Debug ===");
-      debugLog("Loaded from opencode.json:", JSON.stringify(packaged, null, 2));
+      debugLog("Raw loaded from opencode.json:", JSON.stringify(packaged, null, 2));
+      debugLog("Resolved agents with prompts:", JSON.stringify(packaged.agent || {}, null, 2));
 
-      // Merge agents
       if (packaged.agent) {
-        debugLog("Merging agents...");
+        debugLog("Merging agents into cfg...");
         cfg.agent = {
           ...cfg.agent,
           ...packaged.agent
@@ -117,7 +118,7 @@ export default function ultrapowers() {
         cfg.default_agent = packaged.default_agent;
       }
 
-      debugLog("Final merged agent config:", JSON.stringify(cfg.agent, null, 2));
+      debugLog("Final merged cfg.agent:", JSON.stringify(cfg.agent, null, 2));
 
       return cfg;
     }
