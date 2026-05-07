@@ -1,24 +1,36 @@
-import { fileURLToPath } from "node:url";
-import path from "node:path";
+import { join } from "path";
+import { fileURLToPath } from "url";
 
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
+const __dirname = fileURLToPath(new URL(".", import.meta.url));
 
-export default async function ultrapowersPlugin({ client }) {
-  client?.app?.log?.("info", {
-    plugin: "ultrapowers",
-    message: "ultrapowers plugin loaded",
-    root: __dirname
-  });
-
+export default function ultrapowers() {
   return {
-    "shell.env": async () => {
-      return {
-        ULTRAPOWERS_ROOT: __dirname,
-        ULTRAPOWERS_OPENCODE_CONFIG: path.join(__dirname, "opencode.json"),
-        ULTRAPOWERS_SKILLS_DIR: path.join(__dirname, "skills"),
-        ULTRAPOWERS_PROMPTS_DIR: path.join(__dirname, "prompts")
-      };
-    }
+    config(cfg) {
+      cfg ??= {};
+
+      cfg.skills ??= {};
+      cfg.skills.paths ??= [];
+
+      cfg.agents ??= {};
+      cfg.agents.paths ??= [];
+
+      const skillsPath = join(__dirname, ".opencode", "skills");
+      const agentsPath = join(__dirname, ".opencode", "agents");
+      const promptsPath = join(__dirname, ".opencode", "prompts");
+
+      if (!cfg.skills.paths.includes(skillsPath)) {
+        cfg.skills.paths.push(skillsPath);
+      }
+
+      if (!cfg.agents.paths.includes(agentsPath)) {
+        cfg.agents.paths.push(agentsPath);
+      }
+
+      if (!cfg.agents.paths.includes(promptsPath)) {
+        cfg.agents.paths.push(promptsPath);
+      }
+
+      return cfg;
+    },
   };
 }
