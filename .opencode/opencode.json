@@ -3,11 +3,13 @@
   "agent": {
     "ultrapowers-planner": {
       "mode": "primary",
-      "prompt": "{file:.opencode/prompts/planner.md}"
+      "description": "Planning agent for breaking work into steps and implementation plans.",
+      "prompt": "{file:prompts/planner.md}"
     },
     "ultrapowers-reviewer": {
-      "mode": "secondary",
-      "prompt": "{file:.opencode/prompts/reviewer.md}"
+      "mode": "primary",
+      "description": "Review agent for checking code quality, architecture, and risks.",
+      "prompt": "{file:prompts/reviewer.md}"
     }
   }
 }
