@@ -1,6 +1,6 @@
 ---
-name: frontend-ui-3d-playwright
-description: Invoke whenever working with frontend UI, design systems, responsive layouts, animations, accessibility, Three.js, React Three Fiber, Babylon.js, PlayCanvas, shaders, WebGL scenes, 3D product viewers, or any DOM UI layered over 3D.
+name: custom-frontend-3d
+description: You MUST invoke whenever working with frontend UI, design systems, responsive layouts, animations, accessibility, Three.js, React Three Fiber, Babylon.js, PlayCanvas, shaders, WebGL scenes, 3D product viewers, or any DOM UI layered over 3D.
 ---
 
 # Frontend UI + 3D + Playwright
