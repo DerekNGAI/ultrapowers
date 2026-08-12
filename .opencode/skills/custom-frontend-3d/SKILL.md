@@ -10,10 +10,11 @@ This skill is especially for UI-heavy work, Three.js, and hybrid DOM + canvas ex
 
 ## Mandatory rule
 
-Playwright MCP is required from the beginning to the end of every task.
+Playwright MCP is required from the beginning to the end of every task, and it must be used through a dedicated subagent.
+The primary agent must delegate all Playwright MCP calls to that subagent and must not call Playwright MCP directly.
 Do not investigate, plan, implement, debug, optimize, or verify purely by reading code.
-Never claim a fix works unless Playwright MCP has just verified it in the browser.
-If Playwright MCP is unavailable, stop and say the task cannot be completed safely under this skill.
+Never claim a fix works unless the Playwright subagent has just verified it in the browser.
+If Playwright MCP or a usable subagent is unavailable, stop and say the task cannot be completed safely under this skill.
 
 ## When to invoke
 
@@ -36,9 +37,10 @@ Invoke this skill whenever the task involves any of the following:
 
 ## Required workflow
 
-### 1. Investigate with Playwright MCP first
+### 1. Investigate with a Playwright subagent first
 
-Always begin with Playwright MCP before touching code.
+Always begin by launching or resuming a dedicated subagent that uses Playwright MCP before touching code.
+Keep the subagent responsible for browser interaction and have it return screenshots, console and network findings, and interaction results.
 
 Required actions:
 - Open the running page, app, component preview, or repro route
@@ -67,7 +69,7 @@ Never batch many risky UI or 3D changes together unless the task explicitly requ
 ### 3. Implement in small increments
 
 After every meaningful code change:
-- rerun Playwright MCP
+- ask the Playwright subagent to rerun Playwright MCP
 - reload the affected view
 - repeat the relevant user interactions
 - compare the live result with the expected result
@@ -77,9 +79,9 @@ After every meaningful code change:
 
 Implementation is not complete until the browser confirms it.
 
-### 4. Verify from beginning to end with Playwright MCP
+### 4. Verify from beginning to end with the Playwright subagent
 
-Final verification must include:
+Ask the Playwright subagent to perform final verification, which must include:
 - desktop breakpoint
 - mobile breakpoint
 - any critical intermediate breakpoint when layout complexity demands it
