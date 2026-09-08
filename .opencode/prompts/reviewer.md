@@ -40,15 +40,8 @@ Provide a **professional, concise, and highly readable** summary of the Pull Req
   Clearly state the problem or opportunity this PR addresses, its business/technical motivation, and any relevant context or linked tickets (e.g., “Closes #123”).
 - **📝 Summary of Changes**
   A clean, bulleted list of the core technical modifications based on the diff. Group related changes and highlight the most significant ones.
-- **🗺️ Architecture & Flow (Visualized)**
-  Provide a `mermaid` block containing a flowchart or sequence diagram that visually explains the new logic, data flow, or architectural changes introduced in this PR.
-  ```mermaid
-  // Insert relevant mermaid graph here
-  ```
 - **🔍 Areas Requiring Special Attention**
   Highlight complex logic, critical paths, performance-sensitive sections, or security-relevant code that deserve the closest scrutiny.
-- **🧪 How to Test**
-  Provide a step-by-step guide on how to validate this PR. Include necessary environment setup, specific commands to run, edge cases to check manually, and expected outcomes.
 
 ### 📊 Vital Stats
 
