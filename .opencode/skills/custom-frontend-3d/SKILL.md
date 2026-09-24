@@ -16,6 +16,14 @@ Do not investigate, plan, implement, debug, optimize, or verify purely by readin
 Never claim a fix works unless the Playwright subagent has just verified it in the browser.
 If Playwright MCP or a usable subagent is unavailable, stop and say the task cannot be completed safely under this skill.
 
+### Browser and tab hygiene
+
+- Use one browser tab/page for the task whenever possible.
+- Before starting, inspect the existing browser tabs and close duplicate, stale, or unrelated tabs opened for this task.
+- Reuse the active page instead of opening a new tab for each breakpoint, route, or verification pass.
+- When the task is complete, close every browser tab/page and browser context opened or used by the Playwright subagent, including the final page.
+- Report browser cleanup as part of the handoff so no session remains open after the task.
+
 ## When to invoke
 
 Invoke this skill whenever the task involves any of the following:
@@ -41,6 +49,7 @@ Invoke this skill whenever the task involves any of the following:
 
 Always begin by launching or resuming a dedicated subagent that uses Playwright MCP before touching code.
 Keep the subagent responsible for browser interaction and have it return screenshots, console and network findings, and interaction results.
+The subagent must apply the browser and tab hygiene rules above throughout the workflow and perform the final cleanup after verification.
 
 Required actions:
 - Open the running page, app, component preview, or repro route
