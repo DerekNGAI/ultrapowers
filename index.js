@@ -1,7 +1,9 @@
-import { join, dirname, resolve } from "path";
+import { join, dirname, resolve, isAbsolute } from "path";
 import { fileURLToPath } from "url";
-import { existsSync, readFileSync } from "fs";
+import { existsSync, readFileSync, lstatSync, mkdirSync, realpathSync, statSync, accessSync, constants, writeFileSync, chmodSync, linkSync, renameSync, rmSync } from "fs";
+import { homedir } from "node:os";
 import { randomUUID } from "node:crypto";
+import { parse, modify, applyEdits } from "jsonc-parser";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -65,7 +67,84 @@ function mergeDefaults(defaults, overrides) {
 
 const reviewers = ["ultrapowers-reviewer-a", "ultrapowers-reviewer-b"];
 
+function ensureReviewerTemplates(files, file) {
+  const isRecord = (value) => value !== null && typeof value === "object" && !Array.isArray(value);
+  const agents = {};
+  let before;
+  let hasSchema = false;
+  for (const path of files) {
+    let text;
+    try {
+      text = readFileSync(path, "utf8");
+    } catch (error) {
+      if (error.code !== "ENOENT") throw error;
+      // A dangling symlink is an existing user file, not a missing config.
+      try { lstatSync(path); } catch (missing) {
+        if (missing.code === "ENOENT") continue;
+        throw missing;
+      }
+      throw error;
+    }
+    const errors = [];
+    const parsed = parse(text, errors, { allowTrailingComma: true });
+    if (errors.length || !isRecord(parsed) || (parsed.agent !== undefined && !isRecord(parsed.agent))) {
+      throw new Error(`Invalid OpenCode config in ${path}; reviewer templates were not written.`);
+    }
+    for (const name of reviewers) {
+      const agent = parsed.agent?.[name];
+      if (agent === undefined) continue;
+      if (!isRecord(agent)) throw new Error(`Invalid agent.${name} in ${path}; reviewer templates were not written.`);
+      agents[name] = { ...agents[name], ...agent };
+    }
+    if (path === file) {
+      before = text;
+      hasSchema = Object.hasOwn(parsed, "$schema");
+    }
+  }
+
+  let after = before ?? "{}\n";
+  const options = {
+    // Prepend fields so trailing comments stay with their original properties.
+    getInsertionIndex: () => 0,
+    formattingOptions: { insertSpaces: true, tabSize: 2, eol: after.includes("\r\n") ? "\r\n" : "\n" },
+  };
+  if (!hasSchema) after = applyEdits(after, modify(after, ["$schema"], "https://opencode.ai/config.json", options));
+  for (const name of reviewers) {
+    for (const [key, value] of Object.entries({ mode: "subagent", model: "" })) {
+      if (Object.hasOwn(agents[name] ?? {}, key)) continue;
+      after = applyEdits(after, modify(after, ["agent", name, key], value, options));
+    }
+  }
+  if (after === before) return false;
+
+  mkdirSync(dirname(file), { recursive: true, mode: 0o700 });
+  const target = before === undefined ? file : realpathSync(file);
+  if (before !== undefined) accessSync(target, constants.W_OK);
+  const temporary = join(dirname(target), `.ultrapowers-${randomUUID()}.tmp`);
+  try {
+    writeFileSync(temporary, after, { flag: "wx", mode: 0o600 });
+    chmodSync(temporary, before === undefined ? 0o600 : statSync(target).mode & 0o777);
+    if (before === undefined) {
+      // Creating a config must not replace one created by another process.
+      linkSync(temporary, target);
+    } else {
+      if (realpathSync(file) !== target || readFileSync(file, "utf8") !== before) {
+        throw new Error(`OpenCode config changed during template setup: ${file}. Restart OpenCode to retry.`);
+      }
+      renameSync(temporary, target);
+    }
+  } finally {
+    rmSync(temporary, { force: true });
+  }
+  return true;
+}
+
 export default function ultrapowers({ client } = {}) {
+  const xdg = process.env.XDG_CONFIG_HOME;
+  const configDirectory = join(xdg && isAbsolute(xdg) ? xdg : join(homedir(), ".config"), "opencode");
+  const globalFiles = ["config.json", "opencode.json", "opencode.jsonc"].map((name) => join(configDirectory, name));
+  const templatePath = globalFiles.findLast((path) => existsSync(path)) ?? globalFiles[1];
+  let templateError;
   let config;
   const runs = new Map();
 
@@ -74,7 +153,7 @@ export default function ultrapowers({ client } = {}) {
       const agent = config?.agent?.[name];
       const model = agent?.model;
       if (agent?.disable || agent?.mode !== "subagent" || typeof model !== "string" || !/^[^/\s]+\/\S+$/.test(model)) {
-        throw new Error(`Configure agent.${name}.model as an available provider/model ID (mode: subagent) before dual-review.`);
+        throw new Error(`${templateError ? `${templateError}\n` : ""}Configure agent.${name}.model as an available provider/model ID (mode: subagent, enabled) in ${templatePath} or your project config. Set both reviewer model IDs using opencode models, then quit and restart OpenCode before dual-review.`);
       }
       return model;
     });
@@ -127,6 +206,19 @@ export default function ultrapowers({ client } = {}) {
 
   return {
     config(cfg) {
+      templateError = undefined;
+      try {
+        if (ensureReviewerTemplates(globalFiles, templatePath)) {
+          // SDK requests may wait for plugin initialization; never await them here.
+          void client?.tui?.showToast?.({ body: {
+            variant: "info",
+            message: `Reviewer templates added to ${templatePath}. Choose models using opencode models, then quit and restart OpenCode.`,
+          } })?.catch(() => {});
+        }
+      } catch (error) {
+        templateError = `Automatic reviewer template setup failed for ${templatePath}: ${error.message}`;
+        void client?.app?.log?.({ body: { service: "ultrapowers", level: "warn", message: templateError } })?.catch(() => {});
+      }
       cfg ??= {};
       cfg.skills ??= {};
       cfg.skills.paths ??= [];

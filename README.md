@@ -15,19 +15,34 @@ In another project, add `ultrapowers` to your existing OpenCode `plugin` list.
 Use the package version or Git package spec you normally install. This repo's
 `.opencode/opencode.json` already loads its local `index.js`.
 
-Choose two connected models using `opencode models`. Set their IDs in your
-project `opencode.json` or `~/.config/opencode/opencode.json`. The placeholders
-below must be replaced with real IDs; no vendor is built into the workflow.
+On startup, the plugin adds missing reviewer templates to your global OpenCode
+config. It uses an existing `~/.config/opencode/opencode.jsonc` first, then
+`opencode.json`, then the legacy `config.json`; if none exists, it creates
+`opencode.json`. When `XDG_CONFIG_HOME` is set to an absolute path, the directory
+is `$XDG_CONFIG_HOME/opencode` instead.
+
+The saved entries start with blank model IDs:
 
 ```json
 {
   "$schema": "https://opencode.ai/config.json",
   "agent": {
-    "ultrapowers-reviewer-a": { "model": "provider-a/model-a" },
-    "ultrapowers-reviewer-b": { "model": "provider-b/model-b" }
+    "ultrapowers-reviewer-a": { "mode": "subagent", "model": "" },
+    "ultrapowers-reviewer-b": { "mode": "subagent", "model": "" }
   }
 }
 ```
+
+Run `opencode models` and replace both blank values with connected
+`provider/model` IDs, then quit and restart OpenCode. The plugin supplies the
+reviewer prompts and read-only permissions. You can also override the model IDs
+in a project's OpenCode config.
+
+Template creation preserves existing models and agent settings, JSONC comments,
+config references, file permissions, and symlinks. Existing choices in another
+global config file are respected. Once the fields exist, startup does not
+rewrite the file. Setup failures are logged as warnings and included in the
+preflight setup message when reviewer models are missing.
 
 Each model must support tool calls and have a different `family` in OpenCode's
 model metadata. Models may be served by the same provider, such as a gateway
@@ -110,8 +125,12 @@ fixes. The full protocol is in
 npm test
 ```
 
-The tests exercise package registration, local overrides, model preflight, and
-per-reviewer call limits using Node's built-in test runner.
+The tests use isolated temporary config directories and Node's built-in test
+runner to check automatic templates, JSONC preservation, repeated startup,
+config failures, symlinks, package registration, local overrides, model
+preflight, and per-reviewer call limits.
+Automatic template creation and a repeat startup without rewriting the config
+were also checked with isolated JSONC settings on OpenCode 1.18.33.
 Registration and resolved reviewer permissions were checked with OpenCode
 1.18.33. A live CLI check confirmed snapshot capture, two configured-model task
 launches, and an `INCOMPLETE` verdict table on provider rejection. The tested
