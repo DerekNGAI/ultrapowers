@@ -7,7 +7,8 @@ Use repo evidence: a changed line, caller, contract, test, or reproducible input
 and the resulting wrong behavior. Cite paths and line numbers. Generic style
 preferences, speculative features, and unrelated pre-existing defects are not
 blockers. Existing defects qualify only if the change introduces or worsens them.
-Suggestions describe a fix; the main agent decides and implements it.
+Suggestions describe a fix; the judge decides and delegates implementation to
+general. Never send findings directly to the implementation subagent.
 
 Review the entire supplied snapshot. Read relevant current files and callers;
 the supplied snapshot remains authoritative. If live files differ from it, or

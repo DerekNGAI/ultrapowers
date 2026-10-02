@@ -1,9 +1,35 @@
 # Dual-review protocol
 
-This protocol applies to `ultrapowers-build`, `ultrapowers-reviewer-a`,
+This protocol applies to `ultrapowers-judge`, `ultrapowers-reviewer-a`,
 `ultrapowers-reviewer-b`, and `/dual-review`. Other agents need not start this
-workflow. Use native OpenCode agents and Task calls. The main agent implements,
-judges, and edits; reviewers inspect and report only to the main agent.
+workflow. Use native OpenCode agents and Task calls. The judge plans, delegates,
+and decides; built-in `general` implements and runs checks; reviewers inspect
+and report only to the judge. The judge never edits files.
+
+## Implementation handoff
+
+1. Preflight must pass before delegating implementation or checks. For a coding
+   request, delegate the requested implementation before the first review. For
+   `/dual-review`, begin with the existing change and delegate only required
+   checks and accepted fixes. If there is no change to review, report NO_CHANGES.
+2. Use one foreground `general` session per request; retain its `task_id` and
+   resume it for checks and fixes. Send the scope, constraints, relevant paths,
+   required checks, and expected HEAD, status, and file hashes. Before editing,
+   general must verify that baseline and stop on unexpected changes. Preserve
+   existing user work. Do not bypass general's configured permissions.
+3. For fixes, send accepted finding IDs, the judge's decisions, necessary
+   evidence, and the intended behavior. Keep rejected findings and reviewer
+   transcripts in the judge and reviewer sessions. General must not judge
+   findings, delegate reviews, or start its own dual-review workflow. Check-only
+   tasks must not edit sources or add tests; disclose any generated artifacts.
+4. Request a concise implementation result: changed paths, addressed finding
+   IDs, check commands and outcomes, and unresolved blockers. Keep detailed reads,
+   edits, and check output in general's child session. The judge may inspect
+   relevant code or failure output when needed to evaluate that result.
+5. Wait for general before capturing a review snapshot and for both reviewers
+   before delegating any fixes or checks. Recheck the workspace before delegation
+   and verify the resulting diff against the delegated scope. Delegation failures
+   or denied calls end as INCOMPLETE; the judge must never implement as a fallback.
 
 ## Snapshot and independence
 
@@ -94,24 +120,25 @@ Count a round when its pair of review calls starts, even if a call fails.
    checks. For nits, record **fix** or **defer** with a reason. Nits do not enter
    the dispute loop. Do not count rejected findings as withdrawn until their
    originating reviewer explicitly withdraws them.
-4. Before editing, challenge rejected substantive findings on the original
+4. Before delegating fixes, challenge rejected substantive findings on the original
    snapshot. Resume each originating `task_id`; send only their challenged IDs and individual
    rebuttals. The reviewer already has its original findings and snapshot.
    Both owners of a duplicate receive their own IDs, never the other's report.
-5. Reconsider any new evidence. Accept and fix if valid, or keep your rejection
+5. Reconsider any new evidence. Accept and delegate a fix if valid, or keep your rejection
    with a concrete explanation and mark the finding disputed. Do not have a
    second rebuttal exchange in the same round.
-6. Apply accepted fixes and any chosen nits yourself. Run the smallest relevant
-   checks, including reproductions needed to establish the fix. Report failures
-   honestly. Obtain fresh reviews from BOTH reviewers on the revised snapshot
-   in the next round, resuming their own sessions and retaining their IDs.
+6. Delegate accepted fixes, chosen nits, and the smallest relevant checks to the
+   same general session, including reproductions needed to establish the fix.
+   Report failures honestly. Verify the resulting diff and obtain fresh reviews
+   from BOTH reviewers on the revised snapshot in the next round, resuming their
+   own sessions and retaining their IDs.
    For continued disputes without edits, the next round may use the unchanged
    snapshot data but still consumes a round. Reviewers must justify retained
    objections and explicitly update their verdicts.
 7. Stop early only when both reviewers approve the SAME current snapshot with
    complete coverage, the workspace still matches it, and required checks pass.
    Approval with deferred nits is allowed. After round 3, stop with the limit
-   outcome if approval is absent. Fix accepted round-3 issues if needed, but
+   outcome if approval is absent. Delegate accepted round-3 fixes if needed, but
    explicitly mark the resulting final diff unreviewed; never reuse old approvals.
    If the runtime call cap or agent step budget is hit, summarize immediately.
 

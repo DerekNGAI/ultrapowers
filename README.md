@@ -5,9 +5,10 @@ OpenCode skills, agents, and a bounded review workflow.
 ## Dual review
 
 `/dual-review` sends the current project change to two independent, read-only
-reviewers. The primary agent judges every finding, fixes accepted issues, and
-returns rejected substantive findings to their originating reviewer. Reviews
-stop after three rounds. Nits do not block approval.
+reviewers. The read-only `ultrapowers-judge` primary agent judges every finding,
+delegates accepted fixes and checks to OpenCode's built-in `general` subagent,
+and returns rejected substantive findings to their originating reviewer.
+Reviews stop after three rounds. Nits do not block approval.
 
 ### Setup
 
@@ -64,8 +65,13 @@ provider configuration alongside the model's other settings:
 
 The workflow preflights availability and model families before starting. Unset
 reviewer models produce an `INCOMPLETE` setup report instead of inheriting the
-primary agent's model. The primary agent uses your normal selected model; optionally
-override `agent.ultrapowers-build.model` as well.
+primary agent's model. The judge uses your normal selected model; optionally
+override `agent.ultrapowers-judge.model`. General uses its existing OpenCode
+configuration and inherits the calling judge's model if no model is configured
+for general. The package does not override general's model, prompt, or permissions.
+
+If migrating from `ultrapowers-build`, move your agent overrides to
+`agent.ultrapowers-judge` and update `default_agent` if it names the old agent.
 
 **Quit and restart OpenCode after changing configuration, prompts, or model
 settings.** A running session keeps its loaded configuration.
@@ -82,9 +88,12 @@ You can append review focus, for example `/dual-review focus on error handling`.
 The command reviews staged, unstaged, and non-ignored untracked changes. If
 there are no changes, it returns `NO_CHANGES`.
 
-Alternatively, select `ultrapowers-build` as your primary agent and give it a
-coding task. It implements the change, runs checks, and performs dual review
-before declaring completion. It delegates only critique to the two reviewers.
+Alternatively, select `ultrapowers-judge` as your primary agent and give it a
+coding task. It plans the work, delegates implementation and checks to general,
+then performs dual review before declaring completion. Preflight must pass
+before either implementation or review begins. If general is disabled or its
+permissions prevent implementation, the judge reports `INCOMPLETE` with the
+blocker.
 
 For CLI use:
 
@@ -92,9 +101,20 @@ For CLI use:
 opencode run --command dual-review
 ```
 
-The main session shows the reviewer models, round and snapshot, findings, and
+The judge session shows the reviewer models, round and snapshot, findings, and
 accept/reject decisions. OpenCode's child-session navigation lets you inspect
-each reviewer independently. Follow-up calls resume each reviewer's own session.
+general and each reviewer independently. The judge resumes one general session
+per request for implementation, checks, and fixes, and resumes each reviewer's
+own session for revised snapshots and rebuttals.
+
+General receives an implementation brief with scope, constraints, expected
+workspace state, and required checks. For fixes it receives accepted finding IDs
+and the evidence needed to implement them. It returns changed paths, addressed
+IDs, check commands and outcomes, and blockers. Detailed implementation reads,
+edits, and check output stay in general's session. Full review snapshots remain
+in the judge's conversation, so large diffs still use its context. Delegation
+reduces implementation context in the judge; it does not guarantee lower total
+token usage across all agents.
 
 The final report includes both reviewer verdicts and a finding table showing
 fixed issues, explicit withdrawals, remaining disputes, deferred nits, and fixes
@@ -107,16 +127,23 @@ same final snapshot and the required checks to pass.
 The shared protocol permits three full reviews and one rebuttal per reviewer in
 each round. The package additionally enforces six Task calls per reviewer per
 invocation, including resumed sessions, with native step budgets of 80 for the
-primary agent and 30 for each reviewer. A new explicit primary-agent request or
+judge and 30 for each reviewer. General calls do not consume the reviewer
+budget. A new explicit judge request or
 `/dual-review` invocation starts a new budget; synthetic continuation messages
-preserve it. A denied call requires the main agent to stop and summarize.
+preserve it. A new request to another agent ends the workflow's implementation
+gate. A denied call requires the judge to stop and summarize.
 
 Round sequencing, JSON findings, independence, and decisions are agent
 instructions, not a custom scheduler. File and tool restrictions and the Task
 call ceiling are enforced by OpenCode permissions and the package hooks.
-Reviewers can read, list, glob, and search files. Shell commands, writes,
-delegation, and MCP tools are denied. Only the main agent runs checks and applies
-fixes. The full protocol is in
+Reviewers can read, list, glob, and search files. Their shell commands, writes,
+delegation, and MCP tools are denied. The judge can inspect files, use read-only
+Git commands, and delegate to general and the two reviewers; direct edits and
+unlisted tools are denied. General runs checks and applies fixes using its own
+configured permissions. All workflow tasks run in the foreground. The hook
+blocks implementation after failed preflight and rejects background tasks during
+an active workflow. General finishes before a snapshot is captured, and both
+reviewers finish before any fixes or checks are delegated. The full protocol is in
 [dual-review.md](.opencode/instructions/dual-review.md).
 
 ## Verification
@@ -126,27 +153,37 @@ npm test
 ```
 
 The tests use isolated temporary config directories and Node's built-in test
-runner to check automatic templates, JSONC preservation, repeated startup,
-config failures, symlinks, package registration, local overrides, model
-preflight, and per-reviewer call limits.
+runner to check judge registration, command routing, permission configuration,
+preservation of general overrides, preflight gates, foreground tasks, and
+per-reviewer call limits across resumed tasks, synthetic continuation messages,
+new requests, and agent switching. Provider metadata is supplied by a test
+client; no live model calls are made.
+The resolved configuration was also checked with isolated settings on OpenCode
+1.18.33: `/dual-review` routes to the judge, the judge cannot edit or run unlisted
+shell commands, native general retains write and shell access, and both
+reviewers remain read-only.
 Automatic template creation and a repeat startup without rewriting the config
 were also checked with isolated JSONC settings on OpenCode 1.18.33.
-Registration and resolved reviewer permissions were checked with OpenCode
-1.18.33. A live CLI check confirmed snapshot capture, two configured-model task
-launches, and an `INCOMPLETE` verdict table on provider rejection. The tested
+Earlier registration and resolved reviewer permissions were checked with
+OpenCode 1.18.33. A live CLI check of the previous implementation confirmed
+snapshot capture, two configured-model task launches, and an `INCOMPLETE` verdict
+table on provider rejection. The tested
 OpenCode free-tier models rejected subagent requests with "OpenCode's free tier
 can only be used from within OpenCode"; their successful main-agent calls did not
 establish reviewer access. A subsequent check using OpenAI and Anthropic also
 ended as `INCOMPLETE` due to region and forbidden-access responses, with no
-retries after the first round. The successful findings/fix/rebuttal loop still
-needs verification with models that accept subagent requests.
+retries after the first round. The successful delegated implementation and
+findings/fix/rebuttal loop still needs verification with models that accept
+subagent requests.
 
 For a live acceptance check with two configured models:
 
 1. Prepare a small change with an observable defect and a check reproducing it.
    Run `/dual-review` and confirm both reviewers inspect the same snapshot.
-2. Confirm the main agent records reasons for its decisions, fixes valid issues,
-   runs the check, and sends the revised change back to both reviewers.
+2. Confirm the judge records reasons for its decisions, delegates valid fixes and
+   checks to general, waits for completion, verifies the resulting diff, and
+   sends the revised snapshot back to both reviewers. Confirm implementation
+   follow-ups resume the same general session and reviewers remain independent.
 3. If a false positive occurs, confirm the rejection goes only to its owner,
    which withdraws or keeps it with additional evidence. Repeated evidence
    alone must not sustain an objection.

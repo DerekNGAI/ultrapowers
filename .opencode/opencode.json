@@ -14,15 +14,44 @@
       "description": "Review agent for checking code quality, architecture, and risks.",
       "prompt": "{file:prompts/reviewer.md}"
     },
-    "ultrapowers-build": {
+    "ultrapowers-judge": {
       "mode": "primary",
-      "description": "Implements changes and judges two independent reviewers through a bounded dual-review loop.",
+      "description": "Plans work, delegates implementation to general, and judges two independent reviewers through a bounded dual-review loop.",
       "steps": 80,
-      "prompt": "{file:prompts/dual-build.md}",
+      "prompt": "{file:prompts/dual-judge.md}",
       "permission": {
+        "*": "deny",
+        "edit": "deny",
+        "read": {
+          "*": "allow",
+          "*.env": "ask",
+          "*.env.*": "ask",
+          "*.env.example": "allow"
+        },
+        "glob": "allow",
+        "grep": "allow",
+        "list": "allow",
+        "lsp": "allow",
+        "skill": "allow",
+        "webfetch": "allow",
+        "websearch": "allow",
+        "todowrite": "allow",
         "question": "allow",
+        "bash": {
+          "*": "deny",
+          "git rev-parse --show-toplevel": "allow",
+          "git rev-parse HEAD": "allow",
+          "git rev-parse --verify HEAD": "allow",
+          "git status --short --untracked-files=all": "allow",
+          "git diff --no-ext-diff --no-textconv --binary --cached": "allow",
+          "git diff --no-ext-diff --no-textconv --binary": "allow",
+          "git hash-object -- *": "allow",
+          "git ls-files --others --exclude-standard": "allow",
+          "git ls-files --others --exclude-standard -z": "allow"
+        },
         "task": {
           "*": "deny",
+          "general": "allow",
           "ultrapowers-reviewer-a": "allow",
           "ultrapowers-reviewer-b": "allow"
         }
@@ -57,9 +86,9 @@
   },
   "command": {
     "dual-review": {
-      "agent": "ultrapowers-build",
+      "agent": "ultrapowers-judge",
       "subtask": false,
-      "description": "Review the current change with two independent model families, judge findings, fix valid issues, and stop within three rounds.",
+      "description": "Review the current change with two independent model families, judge findings, delegate valid fixes to general, and stop within three rounds.",
       "template": "{file:prompts/dual-review-command.md}"
     }
   }

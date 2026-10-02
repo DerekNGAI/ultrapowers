@@ -251,18 +251,22 @@ export default function ultrapowers({ client } = {}) {
       if (input.command === "dual-review") await prepare(input.sessionID, output);
     },
     async "chat.message"(input, output) {
-      if (input.agent !== "ultrapowers-build") return;
       // Synthetic continuation messages must preserve the current call budget.
       if (output.parts.length && output.parts.every((part) => part.synthetic)) return;
+      if (input.agent !== "ultrapowers-judge") {
+        runs.delete(input.sessionID);
+        return;
+      }
       await prepare(input.sessionID, output);
     },
     async "tool.execute.before"(input, output) {
       if (input.tool !== "task") return;
       const slot = reviewers.indexOf(output.args.subagent_type);
-      if (slot === -1) return;
-      if (output.args.background) throw new Error("Dual-review uses concurrent foreground tasks; wait for both results before changing code.");
+      if (slot === -1 && (output.args.subagent_type !== "general" || !runs.has(input.sessionID))) return;
+      if (output.args.background) throw new Error("Dual-review uses foreground tasks; wait for implementation/checks or both reviewer results before changing code or capturing a snapshot.");
       const run = runs.get(input.sessionID) ?? startReview(input.sessionID);
       await run.ready;
+      if (slot === -1) return;
       if (run.counts[slot] >= 6) throw new Error("Dual-review call limit reached. Stop spawning reviewers and summarize the final verdict and unresolved findings.");
       run.counts[slot]++;
     },
