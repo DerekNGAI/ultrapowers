@@ -24,6 +24,19 @@ If Playwright MCP or a usable subagent is unavailable, stop and say the task can
 - When the task is complete, close every browser tab/page and browser context opened or used by the Playwright subagent, including the final page.
 - Report browser cleanup as part of the handoff so no session remains open after the task.
 
+### Screenshot evidence and storage
+
+- Before implementation, list every requested UI and expected visual outcome in a coverage matrix, including required states, breakpoints, and themes. Each distinct UI or outcome needs its own screenshot for every required variant.
+- Five different UIs require at least five final screenshots; if all five require desktop and mobile coverage, capture at least ten. One overview screenshot does not cover multiple distinct UIs.
+- The Playwright subagent must save screenshots as persistent files in the project's existing artifact location, or default to `artifacts/screenshots/<timestamp>-<task-slug>/` relative to the project root. Pass an explicit destination filename when capturing; temporary tool output alone is insufficient.
+- Keep numbered stage folders: `01-initial/`, `02-after-fix/`, and `03-final/`. Increase the stage numbers for additional meaningful fixes before final verification. Preserve earlier captures and use a unique task directory to avoid overwriting previous tasks.
+- Capture the initial appearance of every reachable UI before changing it, each affected outcome after every meaningful fix, and every expected outcome during final verification. Record unavailable initial states, such as a UI that has not been built yet, instead of inventing baseline evidence.
+- Use lowercase kebab-case filenames with a stable outcome number, UI name, state, breakpoint, and theme when applicable, such as `01-checkout-success-mobile-light.png`. Keep filenames identical across stage folders for matching comparisons.
+- For comparisons, use the same viewport dimensions, route, UI state, theme, and 3D camera framing. Wait for the intended state to render before capturing. Frame the outcome clearly; use full-page captures or additional detail screenshots when relevant content is outside the viewport.
+- Maintain `README.md` in the task's screenshot directory with a table covering every expected outcome and stage. Include the UI or route, expected result, state, viewport dimensions, theme, relative screenshot link, and verification result. Mark unavailable or blocked captures with their reasons so coverage gaps stay visible.
+- The subagent must return saved file paths, coverage gaps, and verification results to the primary agent before browser cleanup. Preserve screenshot files after cleanup.
+- In the final response, link the screenshot index and representative initial and final images, summarize coverage, and disclose any missing captures. Missing required final screenshots means the task is incomplete.
+
 ## When to invoke
 
 Invoke this skill whenever the task involves any of the following:
@@ -54,7 +67,7 @@ The subagent must apply the browser and tab hygiene rules above throughout the w
 Required actions:
 - Open the running page, app, component preview, or repro route
 - Inspect the current behavior in a live browser
-- Capture baseline screenshots at desktop and mobile
+- Capture and save baseline screenshots at desktop and mobile for every reachable UI in the coverage matrix
 - Check console errors and warnings
 - Check failed network requests and broken assets
 - Exercise the exact user flow that is broken or being built
@@ -71,6 +84,7 @@ For each step define:
 - the exact files to change
 - the exact behavior expected after the change
 - the exact Playwright MCP checks that will prove success
+- the screenshot coverage entries that will document each expected outcome
 - what adjacent areas need a quick regression pass
 
 Never batch many risky UI or 3D changes together unless the task explicitly requires it.
@@ -82,6 +96,7 @@ After every meaningful code change:
 - reload the affected view
 - repeat the relevant user interactions
 - compare the live result with the expected result
+- save screenshots of every affected outcome in the next stage folder and update the screenshot index
 - check console again
 - check layout again
 - check for regression in nearby UI or scene behavior
@@ -99,6 +114,7 @@ Ask the Playwright subagent to perform final verification, which must include:
 - keyboard navigation and visible focus
 - reduced-motion behavior when animations exist
 - for 3D: camera behavior, resize behavior, overlay alignment, asset loading, and scene interaction stability
+- fresh final screenshots for every expected outcome and required variant, with the screenshot index updated before browser cleanup
 
 No final answer without final live verification.
 
@@ -210,6 +226,7 @@ A task is done only when Playwright MCP has verified that:
 - accessibility basics still hold
 - the touched flow has no obvious regression
 - the 3D scene remains stable, correctly framed, and performant enough for the task context
+- initial and fix-stage evidence is saved where applicable, every expected outcome and required variant has a final screenshot, and the linked screenshot index accurately reports coverage and verification results
 
 ## Agent behavior
 
