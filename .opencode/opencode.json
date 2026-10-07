@@ -83,7 +83,7 @@
       "agent": "ultrapowers-judge",
       "subtask": false,
       "description": "Review the current change with two independent model families, judge findings, delegate valid fixes to general, and stop within three rounds.",
-      "template": "{file:prompts/dual-review-command.md}"
+      "template": "Review the current project changes using the shared dual-review protocol.\nAdditional scope or focus: $ARGUMENTS"
     }
   }
 }
