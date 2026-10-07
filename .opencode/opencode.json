@@ -3,12 +3,6 @@
   "plugin": ["../index.js"],
   "instructions": [".opencode/instructions/dual-review.md"],
   "agent": {
-    "ultrapowers-planner": {
-      "permission": { "question": "allow" },
-      "mode": "primary",
-      "description": "Planning agent for breaking work into steps and implementation plans.",
-      "prompt": "{file:prompts/planner.md}"
-    },
     "ultrapowers-reviewer": {
       "mode": "primary",
       "description": "Review agent for checking code quality, architecture, and risks.",
