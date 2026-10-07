@@ -76,6 +76,35 @@
         "grep": "allow",
         "list": "allow"
       }
+    },
+    "ultrapowers-committer": {
+      "mode": "primary",
+      "description": "Analyzes changed files, groups them into logical commits, creates branches, commits code, and opens draft PRs following Conventional Commits.",
+      "steps": 50,
+      "prompt": "{file:prompts/committer.md}",
+      "permission": {
+        "*": "deny",
+        "read": "allow",
+        "glob": "allow",
+        "grep": "allow",
+        "list": "allow",
+        "bash": {
+          "*": "deny",
+          "git status --short --untracked-files=all": "allow",
+          "git diff": "allow",
+          "git diff --cached": "allow",
+          "git rev-parse HEAD": "allow",
+          "git rev-parse --abbrev-ref HEAD": "allow",
+          "git checkout -b *": "allow",
+          "git checkout main": "allow",
+          "git checkout master": "allow",
+          "git add *": "allow",
+          "git reset": "allow",
+          "git commit -m *": "allow",
+          "git push -u origin *": "allow",
+          "gh pr create *": "allow"
+        }
+      }
     }
   },
   "command": {
@@ -84,6 +113,12 @@
       "subtask": false,
       "description": "Review the current change with two independent model families, judge findings, delegate valid fixes to general, and stop within three rounds.",
       "template": "Review the current project changes using the shared dual-review protocol.\nAdditional scope or focus: $ARGUMENTS"
+    },
+    "commit": {
+      "agent": "ultrapowers-committer",
+      "subtask": false,
+      "description": "Analyze changed files, group into logical commits, create branches, and open draft PRs following Conventional Commits.",
+      "template": "Analyze the workspace changes and create branches with commits and draft PRs.\nProject prefix (optional): $ARGUMENTS"
     }
   }
 }
