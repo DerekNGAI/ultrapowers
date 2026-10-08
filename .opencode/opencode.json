@@ -79,7 +79,7 @@
     },
     "ultrapowers-committer": {
       "mode": "primary",
-      "description": "Groups completed changes into independent commits and branches, verifies trunk and staged contents, and opens draft PRs following Conventional Commits.",
+      "description": "Asks how to commit completed changes, then creates Conventional Commits on the current branch or independent branches with draft PRs.",
       "steps": 50,
       "prompt": "{file:prompts/committer.md}",
       "permission": {
@@ -100,17 +100,16 @@
         "glob": "allow",
         "grep": "allow",
         "list": "allow",
+        "question": "allow",
         "bash": {
           "*": "deny",
           "git status --short --untracked-files=all": "allow",
           "git rev-parse --show-toplevel": "allow",
           "git rev-parse HEAD": "allow",
           "git rev-parse HEAD^": "allow",
-          "git rev-parse main": "allow",
-          "git rev-parse master": "allow",
+          "git rev-parse --verify refs/heads/*": "allow",
           "git rev-parse --abbrev-ref HEAD": "allow",
-          "git rev-parse --verify refs/remotes/origin/main": "allow",
-          "git rev-parse --verify refs/remotes/origin/master": "allow",
+          "git rev-parse --verify refs/remotes/origin/*": "allow",
           "git log --oneline -10": "allow",
           "git hash-object -- *": "allow",
           "git diff --no-ext-diff --no-textconv": "allow",
@@ -120,11 +119,9 @@
           "git diff --no-ext-diff --no-textconv --name-status HEAD^ HEAD": "allow",
           "git diff --no-ext-diff --no-textconv HEAD^ HEAD": "allow",
           "git remote get-url origin": "allow",
-          "git fetch --no-tags origin refs/heads/main:refs/remotes/origin/main": "allow",
-          "git fetch --no-tags origin refs/heads/master:refs/remotes/origin/master": "allow",
+          "git fetch --no-tags origin refs/heads/*:refs/remotes/origin/*": "allow",
           "git checkout -b *": "allow",
-          "git checkout main": "allow",
-          "git checkout master": "allow",
+          "git switch -- *": "allow",
           "git add -- *": "allow",
           "git reset": "allow",
           "git commit --file=-*": "allow",
@@ -147,8 +144,8 @@
     "commit": {
       "agent": "ultrapowers-committer",
       "subtask": false,
-      "description": "Analyze changed files, group into logical commits, create branches, and open draft PRs following Conventional Commits.",
-      "template": "Analyze the workspace changes and create branches with commits and draft PRs.\nProject prefix (optional): $ARGUMENTS"
+      "description": "Choose local commits on the current branch or independent branches with draft PRs, with or without an issue prefix.",
+      "template": "First use the question tool to ask which commit mode the user wants. Follow the committer workflow for their choice.\nSuggested prefix (optional): $ARGUMENTS"
     }
   }
 }

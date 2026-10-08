@@ -148,28 +148,46 @@ reviewers finish before any fixes or checks are delegated. The full protocol is 
 
 ## Committer
 
-Use `/commit` when implementation and validation are complete. An optional issue
-prefix, such as `/commit ZE-1659`, is used in branch names and PR descriptions.
-The command authorizes commits, pushes to origin, and draft PR creation.
+Use `/commit` when implementation and validation are complete. Every invocation
+starts with OpenCode's native question tool, offering these choices:
 
-The agent starts on `main` or `master` and requires its commit to match the freshly
-fetched origin branch. It stops on missing access, divergent trunk, sensitive
-files or suspected credentials, and changes it cannot fully inspect. It groups
-shared-file and dependent changes together; independent groups each start from
-the captured trunk commit. Staged and unstaged changes are both included, and
-existing staging boundaries are cleared without discarding file contents.
+| Choice | Result |
+| --- | --- |
+| Current branch | Create local Conventional Commits on the current branch. No push or PR. |
+| PRs without prefix | Create independent branches such as `fix/login-error`, push them, and open draft PRs. |
+| PRs with prefix | Ask for an issue prefix, then create branches such as `fix/ZE-1659-login-error`, push them, and open draft PRs. |
 
-Before publishing, the agent checks each group's staged diff and actual commit.
-PRs specify the origin repository, head branch, and starting trunk base explicitly.
-After success it returns to the original `main` or `master` branch. On failure it
-stops and reports partial progress while preserving work and created branches.
-It reports supplied validation evidence and pending checks; it does not run tests
-or infer that an independent branch passed tests from a combined workspace run.
+The answer authorizes only the selected workflow. `/commit ZE-1659` still asks
+for the mode; in prefixed mode, the argument is offered as a suggested prefix.
+Prefixes must contain only ASCII letters, digits, and hyphens. The other modes
+ignore supplied prefixes. Cancellation or an unavailable question tool stops
+the workflow before Git state changes; there is no automatic mode selection.
 
-Grouping, credential inspection, and state comparisons are agent instructions,
-not a custom scheduler or secret scanner. OpenCode enforces the configured tool
-and sensitive-file read permissions. Quit and restart OpenCode after changing
-this agent's configuration or prompt.
+All modes support any named current branch with an existing commit, including
+`main`, `master`, `develop`, `staging`, and feature branches. Current branch mode
+works without GitHub access or a remote and stays on that branch as each commit
+advances its HEAD. The PR modes use the current branch as their base and require
+its SHA to match the freshly fetched origin branch. Missing access or an
+unsynchronized base stops those modes before staging changes.
+
+The agent stops on sensitive files, suspected credentials, or changes it cannot
+fully inspect. It groups shared-file and dependent changes together. Staged,
+unstaged, and non-ignored untracked changes are included; existing staging
+boundaries are cleared without discarding file contents. Each group's staged
+diff and actual commit are checked, including hook effects.
+
+In PR modes, independent groups each start from the captured base commit. Each
+group is committed, pushed, and given a draft PR before the next group starts.
+PRs specify the origin repository, head branch, and starting base explicitly.
+After success the agent returns to the original base branch. On failure it
+reports partial progress while preserving work and created branches. It reports
+supplied validation evidence and pending checks; it does not run tests or infer
+that an independent branch passed tests from a combined workspace run.
+
+Mode selection, grouping, credential inspection, and state comparisons are agent
+instructions, not a custom scheduler or secret scanner. OpenCode enforces the
+configured tool and sensitive-file read permissions. **Quit and restart OpenCode
+after changing this agent's configuration or prompt.**
 
 ## Verification
 
@@ -177,18 +195,23 @@ this agent's configuration or prompt.
 npm test
 ```
 
-The committed tests use Node's built-in test runner and isolated temporary Git
-repositories to execute the committer prompt's branch and commit examples. They
-check independent groups with staged and unstaged input on both `main` and
-`master`, filenames with spaces, return to the starting branch, explicit PR
-targets, and literal multiline PR bodies. They also exercise the preflight fetch
-against synced, local-ahead, remote-ahead, and diverged local remotes while checking
-that pending work is preserved. GitHub CLI arguments and stdin are
-captured locally instead of creating live PRs. An isolated plugin configuration
-check covers registration, prompt resolution, sensitive reads, and preflight
-permissions. These tests do not establish that a model follows every instruction.
-The committer configuration and resolved sensitive-file permissions were also
-checked with isolated settings on OpenCode 1.18.35.
+The tests in `test/committer.test.js` use Node's built-in test runner and isolated
+temporary Git repositories to execute the committer prompt's shell examples.
+They check local commits on a feature branch without a remote, independent PR
+branches from `develop` and `staging` with and without a prefix, mixed staged and
+unstaged edits, untracked files, filenames with spaces, literal commit bodies,
+and return to the starting branch. Local bare repositories receive test pushes;
+no live GitHub PRs are created. Configuration checks cover the question options,
+question permission, command routing, generalized branch permissions, and explicit
+PR targets. These tests do not establish that a model follows every instruction.
+The resolved command, prompt, question permission, and branch permissions were
+also checked with isolated settings on OpenCode 1.18.35.
+
+For an interactive acceptance check, restart OpenCode and invoke `/commit` in a
+disposable repository. Confirm the mode question appears on each invocation,
+including `/commit ZE-1659`, and that prefixed mode asks for the prefix. Cancel
+the question and confirm Git state is unchanged. Choose current branch mode and
+confirm local commits are created without a push or PR.
 
 Previous dual-review validation covered judge registration, command routing,
 permission configuration, preservation of general overrides, preflight gates,
