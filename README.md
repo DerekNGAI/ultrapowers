@@ -146,18 +146,54 @@ an active workflow. General finishes before a snapshot is captured, and both
 reviewers finish before any fixes or checks are delegated. The full protocol is in
 [dual-review.md](.opencode/instructions/dual-review.md).
 
+## Committer
+
+Use `/commit` when implementation and validation are complete. An optional issue
+prefix, such as `/commit ZE-1659`, is used in branch names and PR descriptions.
+The command authorizes commits, pushes to origin, and draft PR creation.
+
+The agent starts on `main` or `master` and requires its commit to match the freshly
+fetched origin branch. It stops on missing access, divergent trunk, sensitive
+files or suspected credentials, and changes it cannot fully inspect. It groups
+shared-file and dependent changes together; independent groups each start from
+the captured trunk commit. Staged and unstaged changes are both included, and
+existing staging boundaries are cleared without discarding file contents.
+
+Before publishing, the agent checks each group's staged diff and actual commit.
+PRs specify the origin repository, head branch, and starting trunk base explicitly.
+After success it returns to the original `main` or `master` branch. On failure it
+stops and reports partial progress while preserving work and created branches.
+It reports supplied validation evidence and pending checks; it does not run tests
+or infer that an independent branch passed tests from a combined workspace run.
+
+Grouping, credential inspection, and state comparisons are agent instructions,
+not a custom scheduler or secret scanner. OpenCode enforces the configured tool
+and sensitive-file read permissions. Quit and restart OpenCode after changing
+this agent's configuration or prompt.
+
 ## Verification
 
 ```sh
 npm test
 ```
 
-The tests use isolated temporary config directories and Node's built-in test
-runner to check judge registration, command routing, permission configuration,
-preservation of general overrides, preflight gates, foreground tasks, and
-per-reviewer call limits across resumed tasks, synthetic continuation messages,
-new requests, and agent switching. Provider metadata is supplied by a test
-client; no live model calls are made.
+The committed tests use Node's built-in test runner and isolated temporary Git
+repositories to execute the committer prompt's branch and commit examples. They
+check independent groups with staged and unstaged input on both `main` and
+`master`, filenames with spaces, return to the starting branch, explicit PR
+targets, and literal multiline PR bodies. They also exercise the preflight fetch
+against synced, local-ahead, remote-ahead, and diverged local remotes while checking
+that pending work is preserved. GitHub CLI arguments and stdin are
+captured locally instead of creating live PRs. An isolated plugin configuration
+check covers registration, prompt resolution, sensitive reads, and preflight
+permissions. These tests do not establish that a model follows every instruction.
+The committer configuration and resolved sensitive-file permissions were also
+checked with isolated settings on OpenCode 1.18.35.
+
+Previous dual-review validation covered judge registration, command routing,
+permission configuration, preservation of general overrides, preflight gates,
+foreground tasks, and per-reviewer call limits. Provider metadata was supplied
+by a test client; no live model calls were made in those checks.
 The resolved configuration was also checked with isolated settings on OpenCode
 1.18.33: `/dual-review` routes to the judge, the judge cannot edit or run unlisted
 shell commands, native general retains write and shell access, and both
