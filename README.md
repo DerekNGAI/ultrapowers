@@ -170,6 +170,11 @@ advances its HEAD. The PR modes use the current branch as their base and require
 its SHA to match the freshly fetched origin branch. Missing access or an
 unsynchronized base stops those modes before staging changes.
 
+SSH origins can use aliases such as `github-work`. Preflight resolves the
+configured hostname with `ssh -G` before verifying the GitHub repository; it
+keeps the original origin for fetching and pushing. SSH connection commands
+remain denied.
+
 The agent stops on sensitive files, suspected credentials, or changes it cannot
 fully inspect. It groups shared-file and dependent changes together. Staged,
 unstaged, and non-ignored untracked changes are included; existing staging

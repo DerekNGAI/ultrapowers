@@ -86,9 +86,19 @@ prefix and use no prefix.
 6. In current branch mode, skip GitHub access, origin, and remote synchronization
    checks. A repository without a remote is supported. In either PR mode, check
    `gh --version`, `gh auth status`, and `git remote get-url origin`.
-   Resolve `{repository}` as the explicit GitHub
-   `HOST/OWNER/REPO` of origin, using `gh repo view {repository} --json nameWithOwner`
-   to verify it. Stop if origin or access is missing or ambiguous.
+   Derive `OWNER/REPO` from origin's path, removing a trailing `.git`. For HTTPS
+   origins, use the URL hostname. For SSH origins (both `git@HOST:OWNER/REPO.git`
+   and `ssh://git@HOST/OWNER/REPO.git`), resolve aliases with the standalone command
+   `ssh -G -- '{origin-host}'`. Include `-l '{user}'` and `-p '{port}'` before `--`
+   when the SSH URL specifies them. Quote all values as shell data. This prints
+   evaluated SSH configuration without opening a connection; use its `hostname`
+   field, not the alias, for GitHub CLI calls. Map GitHub.com's alternate SSH
+   endpoint `ssh.github.com` to `github.com`. Keep the original origin for Git
+   fetch and push; do not rewrite remotes or SSH configuration. Resolve
+   `{repository}` as the explicit GitHub `HOST/OWNER/REPO` and verify it with
+   `gh repo view {repository} --json nameWithOwner`. Stop if SSH inspection fails,
+   or origin or access is missing or ambiguous. Do not use `ssh -T` or an SSH
+   connection to resolve the host.
 7. In PR modes only, fetch the starting base branch and inspect its remote SHA:
 
 ```bash

@@ -119,6 +119,7 @@
           "git diff --no-ext-diff --no-textconv --name-status HEAD^ HEAD": "allow",
           "git diff --no-ext-diff --no-textconv HEAD^ HEAD": "allow",
           "git remote get-url origin": "allow",
+          "ssh -G *": "allow",
           "git fetch --no-tags origin refs/heads/*:refs/remotes/origin/*": "allow",
           "git checkout -b *": "allow",
           "git switch -- *": "allow",
