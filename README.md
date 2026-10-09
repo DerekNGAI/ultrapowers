@@ -175,8 +175,32 @@ configured hostname with `ssh -G` before verifying the GitHub repository; it
 keeps the original origin for fetching and pushing. SSH connection commands
 remain denied.
 
-The agent stops on sensitive files, suspected credentials, or changes it cannot
-fully inspect. It groups shared-file and dependent changes together. Staged,
+Git inspection permissions cover command families, including `git diff`,
+`git status`, `git rev-parse`, `git log`, and blob/index inspection. Option order
+and quoted arguments do not need separate inspection rules. Unexpected shell
+commands request native approval; destructive resets, restores, cleaning, branch
+deletion, amended commits, hook bypasses, force pushes, and Git configuration
+changes remain denied. Skills are available for optional document inspection.
+Fetch and push permissions still target origin and the workflow's explicit refs.
+The prompt's exact quoted commit heredoc header has an explicit allowance because
+native matching includes the message body. Mentioning prohibited flags in that
+body does not block a normal commit; flags added to the command remain denied.
+
+The agent stops on sensitive files, suspected credentials, failed required
+inspection, or unexpected state changes. PDFs, images, and other binary assets
+are supported: it captures working-file hashes and expected Git blob IDs, then
+verifies the staged and committed blobs and modes. Git attributes and clean
+filters may make the stored blob differ from the working-file bytes. Deleted
+assets must be absent from the index and committed tree. `git diff --no-index`
+exit code `1` means files differ and is expected, not a failed preflight.
+
+Binary content inspection is optional. A missing, denied, or unsupported reader
+does not block required hash verification. Unreviewed assets are listed as
+`Binary contents not reviewed` in the plan, PR description, and final report;
+hash checks do not establish document correctness or the absence of embedded
+secrets. Required tool denials and mismatched hashes still stop publication.
+
+It groups shared-file and dependent changes together. Staged,
 unstaged, and non-ignored untracked changes are included; existing staging
 boundaries are cleared without discarding file contents. Each group's staged
 diff and actual commit are checked, including hook effects.
@@ -194,23 +218,38 @@ instructions, not a custom scheduler or secret scanner. OpenCode enforces the
 configured tool and sensitive-file read permissions. **Quit and restart OpenCode
 after changing this agent's configuration or prompt.**
 
+For local development, point a consuming project's plugin entry at the edited
+checkout's `index.js`, for example `file:///absolute/path/to/ultrapowers/index.js`.
+A Git plugin reference containing `#<commit>` keeps loading that revision until
+the reference is updated. This repository already loads `../index.js` from its
+project configuration.
+
 ## Verification
 
 ```sh
+npm ci
 npm test
 ```
 
 The tests in `test/committer.test.js` use Node's built-in test runner and isolated
-temporary Git repositories to execute the committer prompt's shell examples.
-They check local commits on a feature branch without a remote, independent PR
-branches from `develop` and `staging` with and without a prefix, mixed staged and
-unstaged edits, untracked files, filenames with spaces, literal commit bodies,
-and return to the starting branch. Local bare repositories receive test pushes;
-no live GitHub PRs are created. Configuration checks cover the question options,
-question permission, command routing, generalized branch permissions, and explicit
-PR targets. These tests do not establish that a model follows every instruction.
-The resolved command, prompt, question permission, and branch permissions were
-also checked with isolated settings on OpenCode 1.18.35.
+temporary Git repositories to execute the committer prompt's binary hash, index,
+commit, and tree inspection examples. They cover added, modified, and deleted
+binary assets, filenames with spaces, Git attribute normalization, and detection
+of altered staged blobs and hook-produced binary changes. Permission checks cover
+Git option and quoting variations, unexpected-command approval, sensitive-file
+read restrictions, and destructive-command denials. PDF fixtures contain opaque
+binary test data; the tests verify Git behavior, not PDF rendering.
+
+When `opencode` is installed, the suite also loads the plugin in fresh processes with
+isolated settings and executes both previously denied PDF inspection commands
+through `opencode debug agent --tool bash`, then stages and commits the assets
+with the prompt's quoted heredoc. It checks the resolved approval fallback,
+question availability, disabled editing, and native rejection of a destructive
+reset. Those checks skip when OpenCode is absent. The suite was
+verified on OpenCode 1.18.34. Debug tool execution tests denial rules directly;
+it does not exercise the interactive approval dialog. No live model calls,
+remote pushes, or GitHub PRs are made; these tests do not establish that a model
+follows every instruction.
 
 For an interactive acceptance check, restart OpenCode and invoke `/commit` in a
 disposable repository. Confirm the mode question appears on each invocation,
