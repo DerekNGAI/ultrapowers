@@ -77,11 +77,12 @@ prefix and use no prefix.
 4. Capture the complete staged and unstaged diffs with
    `git diff --no-ext-diff --no-textconv --cached` and
    `git diff --no-ext-diff --no-textconv`. Read all remaining changed and new
-   text files, and record their `git hash-object -- {path}` hashes (mark deleted
-   paths as deleted). Check for credentials, tokens, private keys, and passwords
-   in the content as well as filenames. Stop on suspected secrets, unreadable
-   files, binary changes, submodule changes, or truncated inspection. Keep the
-   captured data in the conversation. Do not write a report into the change.
+   text files, and record working-file hashes with
+   `git hash-object --no-filters -- '{path}'` (mark deleted paths as deleted).
+   Check for credentials, tokens, private keys, and passwords in text content
+   as well as filenames. Stop on suspected secrets, files that cannot be hashed,
+   unreadable or truncated text, or submodule changes. Keep the captured data in
+   the conversation. Do not write a report into the change.
 5. Inspect `git log --oneline -10` in all modes.
 6. In current branch mode, skip GitHub access, origin, and remote synchronization
    checks. A repository without a remote is supported. In either PR mode, check
@@ -102,8 +103,8 @@ prefix and use no prefix.
 7. In PR modes only, fetch the starting base branch and inspect its remote SHA:
 
 ```bash
-git fetch --no-tags origin refs/heads/{base-branch}:refs/remotes/origin/{base-branch}
-git rev-parse --verify refs/remotes/origin/{base-branch}
+git fetch --no-tags origin 'refs/heads/{base-branch}:refs/remotes/origin/{base-branch}'
+git rev-parse --verify 'refs/remotes/origin/{base-branch}'
 ```
 
 In PR modes, require the fetched remote SHA to equal the captured `{base-sha}`.
@@ -114,6 +115,44 @@ PR. Fetch failure must also stop before index changes.
 
 In all modes, recheck HEAD, the current branch, status, diffs, and file hashes
 against the capture before proceeding.
+
+#### Binary assets
+
+PDFs, images, and other binary assets are supported. Do not stop merely because
+Git reports a binary diff or a content reader cannot render the file. Use
+`git diff --no-ext-diff --no-textconv --numstat` (also with `--cached`) to identify
+tracked binary changes. For an untracked asset, inspect its Git classification:
+
+```bash
+git diff --no-ext-diff --no-textconv --no-index --numstat -- /dev/null '{path}'
+```
+
+Exit code `1` from `git diff --no-index` means the files differ and is expected;
+`0` also succeeds, while other exit codes are errors. Treat known binary formats
+such as PDF as binary assets even if Git classifies their bytes as text.
+
+For every added or modified binary asset, capture its path, change kind, file mode
+where Git reports it, and both hashes below. The first identifies the working-file
+bytes; the second is the expected Git blob after repository attributes and clean
+filters, including Git LFS, are applied. Do not require these two hashes to match.
+For deleted assets, record the deletion and require their absence from the index
+and committed tree.
+
+```bash
+git hash-object --no-filters -- '{path}'
+```
+
+```bash
+git hash-object --path='{path}' -- '{path}'
+```
+
+Binary content inspection is optional. Use an available, permitted reader when
+helpful; if it is unavailable, denied, or cannot render or extract the asset,
+continue with the required hash checks. Do not bypass a denied permission or retry
+with broader commands. Disclose `Binary contents not reviewed: {paths}` in the
+plan, PR description, and final report when applicable. A hash comparison verifies
+file identity, not document contents or the absence of embedded secrets. Never
+claim a binary asset passed content or credential inspection without evidence.
 
 ### Phase 2: Group changes
 
@@ -168,11 +207,11 @@ group. Do not create or switch branches, push, or open PRs in this mode.
 
 In PR modes, complete phases 4 and 5 for each group before starting the next.
 Set `{expected-parent}` to `{base-sha}` for every group. Verify the starting base
-ref still equals `{base-sha}` using `git rev-parse --verify refs/heads/{base-branch}`.
+ref still equals `{base-sha}` using `git rev-parse --verify 'refs/heads/{base-branch}'`.
 Create each branch explicitly from the original SHA, not the previous group:
 
 ```bash
-git checkout -b {branch-name} {base-sha}
+git checkout -b '{branch-name}' '{base-sha}'
 ```
 
 In all modes, verify that remaining files still match the captured contents;
@@ -193,6 +232,17 @@ this group's captured change, with no extra paths, omitted changes, or secrets. 
 not use `git add .`, `git add -A`, globs, or `git commit -a`. An empty or mismatched
 staged diff must stop; do not commit or publish it.
 
+For each added or modified binary asset, recheck its working-file hash against the
+capture and compare the index's blob ID with the captured expected Git blob:
+
+```bash
+git ls-files --stage -- '{path}'
+```
+
+Require exactly one stage-0 entry with the expected blob ID and intended file mode;
+deleted paths must have no entry. A `Binary files differ` marker alone does not
+verify the staged contents. Stop on a missing, unexpected, or mismatched blob.
+
 ```bash
 git commit --file=- <<'ULTRAPOWERS_COMMIT_MESSAGE'
 {full conventional commit message}
@@ -211,7 +261,16 @@ Require its parent SHA to equal `{expected-parent}` and its full diff to match
 only the intended group. Recheck for secrets and verify remaining files against
 the capture. If hooks changed committed contents or left unexpected working
 changes, stop and report the discrepancy rather than amending or publishing an
-uninspected result. Record the branch and commit SHA immediately.
+uninspected result. For each binary path, also inspect the committed tree:
+
+```bash
+git ls-tree HEAD -- '{path}'
+```
+
+Require the committed blob ID and mode to match the verified index entry; deleted
+paths must be absent. Stop before publishing if hooks changed any binary blob,
+even if its text diff still says only `Binary files differ`. Record the branch and
+commit SHA immediately.
 
 ### Phase 5: Push and open a draft PR
 
@@ -219,7 +278,7 @@ This phase runs only in either PR mode. Push only this group's new branch, then
 create its PR with an explicit repository, head, and the captured base branch:
 
 ```bash
-git push -u origin refs/heads/{branch-name}:refs/heads/{branch-name}
+git push -u origin 'refs/heads/{branch-name}:refs/heads/{branch-name}'
 ```
 
 The title is the Conventional Commit subject, preceded by the prefix only in
@@ -256,7 +315,7 @@ ref equal the last verified commit SHA. Do not require HEAD to equal the origina
 In PR modes, return to the captured base branch:
 
 ```bash
-git switch -- {base-branch}
+git switch -- '{base-branch}'
 ```
 
 In PR modes, verify the current branch equals `{base-branch}`, HEAD still equals
@@ -271,7 +330,12 @@ mode, starting branch, current branch, validation evidence, and any remaining
 changes.
 Never report success for a command that did not complete.
 
-On any denied tool, Git/GitHub error, failed preflight, secret concern, or state
-mismatch, stop and report the blocker and partial progress. Leave all work and
-created branches intact. Do not retry with broader commands, stash, delete
-branches, change Git config, bypass hooks, reset files, or perform rollback.
+Unexpected shell commands request native permission approval instead of being
+automatically denied. Wait for that result; do not treat a pending request as a
+failure or assume approval. On a denied required tool, Git/GitHub error, failed
+required preflight check, secret concern, or state mismatch, stop and report the
+blocker and partial progress. Optional binary content inspection follows the
+nonblocking rule above, and the expected `git diff --no-index` exit code `1` is
+not an error. Leave all work and created branches intact. Do not retry with
+broader commands, stash, delete branches, change Git config, bypass hooks, reset
+files, or perform rollback.
