@@ -200,13 +200,32 @@ does not block required hash verification. Unreviewed assets are listed as
 hash checks do not establish document correctness or the absence of embedded
 secrets. Required tool denials and mismatched hashes still stop publication.
 
-It groups shared-file and dependent changes together. Staged,
-unstaged, and non-ignored untracked changes are included; existing staging
-boundaries are cleared without discarding file contents. Each group's staged
-diff and actual commit are checked, including hook effects.
+It prefers the smallest coherent, reviewable commit with one clear purpose. Tests
+stay with the behavior they verify, plus configuration and dependencies required
+for that step. Local commits may depend on earlier commits in the sequence and
+split text changes within the same file, including newly added files. Each
+intermediate commit must leave the project working. For example, a prerequisite
+refactor with tests can precede implementation with unit tests, then caller
+integration with integration tests. Shared files or dependencies alone do not
+require one large local commit.
 
-In PR modes, independent groups each start from the captured base commit. Each
-group is committed, pushed, and given a draft PR before the next group starts.
+Groups above 400 added plus deleted lines of non-generated text trigger another
+attempt to split and an explanation if kept together. This is a review threshold,
+not a hard cap. Renames, deletions, binary assets, and generated files stay whole;
+dependency manifests and lockfiles stay synchronized.
+
+Staged, unstaged, and non-ignored untracked changes are included; existing staging
+boundaries are cleared without discarding file contents. Whole-file groups use
+explicit paths; partial local changes use checked `git apply --cached` patches
+without editing working files. Only the documented check and apply heredocs are
+allowed; other `git apply` commands are denied. Each group's staged diff and actual
+commit are checked, including hook effects. Final text blobs must match the captured
+change after repository normalization. Combined-workspace tests are not reported
+as proof that intermediate commits passed.
+
+In PR modes, shared-file and dependent changes stay together so each group works
+independently from the captured base commit. These modes do not create stacked PRs.
+Each group is committed, pushed, and given a draft PR before the next group starts.
 PRs specify the origin repository, head branch, and starting base explicitly.
 After success the agent returns to the original base branch. On failure it
 reports partial progress while preserving work and created branches. It reports
@@ -253,30 +272,26 @@ npm test
 ```
 
 The tests in `test/committer.test.js` use Node's built-in test runner and isolated
-temporary Git repositories to execute the committer prompt's binary hash, index,
-commit, and tree inspection examples. They cover added, modified, and deleted
-binary assets, filenames with spaces, Git attribute normalization, and detection
-of altered staged blobs and hook-produced binary changes. Permission checks cover
-Git option and quoting variations, unexpected-command approval, sensitive-file
-read restrictions, and destructive-command denials. PDF fixtures contain opaque
-binary test data; the tests verify Git behavior, not PDF rendering.
-
-When `opencode` is installed, the suite also loads the plugin in fresh processes with
-isolated settings and executes both previously denied PDF inspection commands
-through `opencode debug agent --tool bash`, then stages and commits the assets
-with the prompt's quoted heredoc. It checks the resolved approval fallback,
-question availability, disabled editing, and native rejection of a destructive
-reset. Those checks skip when OpenCode is absent. The suite was
-verified on OpenCode 1.18.34. Debug tool execution tests denial rules directly;
-it does not exercise the interactive approval dialog. No live model calls,
-remote pushes, or GitHub PRs are made; these tests do not establish that a model
-follows every instruction.
+temporary Git repositories to execute the committer prompt's partial-staging
+commands. They split tracked and newly added text files, including filenames with
+spaces, into successive dependent commits while preserving the complete working
+files. They verify each committed tree and parent, Git line-ending normalization,
+the final clean state and blob, and that a mismatched patch changes neither the
+index nor working files. When OpenCode is installed, a native debug-tool check also
+verifies the cached heredocs are allowed and working-tree patch commands are denied
+using isolated settings without external plugins. This check skips when OpenCode
+is absent. No live model calls, remote pushes, or GitHub PRs are made; these tests
+do not establish that a model chooses good groups or follows every instruction.
 
 For an interactive acceptance check, restart OpenCode and invoke `/commit` in a
 disposable repository. Confirm the mode question appears on each invocation,
 including `/commit ZE-1659`, and that prefixed mode asks for the prefix. Cancel
 the question and confirm Git state is unchanged. Choose current branch mode and
 confirm local commits are created without a push or PR.
+Include separable edits in one text file and confirm local commits contain only
+their planned portions, in dependency order. Include a group over 400 changed
+lines and confirm the plan explains any remaining large group. In PR mode,
+confirm shared-file and dependent changes stay together in an independent branch.
 
 Previous dual-review validation covered judge registration, command routing,
 permission configuration, preservation of general overrides, preflight gates,

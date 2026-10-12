@@ -83,6 +83,9 @@ prefix and use no prefix.
    as well as filenames. Stop on suspected secrets, files that cannot be hashed,
    unreadable or truncated text, or submodule changes. Keep the captured data in
    the conversation. Do not write a report into the change.
+   For added or modified text files, also capture the expected final Git blob with
+   `git hash-object --path='{path}' -- '{path}'`, including attribute normalization
+   and clean filters. The working-file hash and Git blob need not match.
 5. Inspect `git log --oneline -10` in all modes.
 6. In current branch mode, skip GitHub access, origin, and remote synchronization
    checks. A repository without a remote is supported. In either PR mode, check
@@ -156,24 +159,39 @@ claim a binary asset passed content or credential inspection without evidence.
 
 ### Phase 2: Group changes
 
-Each group becomes one logical commit. In current branch mode, commits are made
-sequentially on the starting branch. In PR modes, each group becomes one
-independently usable branch with one commit. Assign every changed path to exactly
-one group; keep both sides of a rename together.
+Each group becomes the smallest coherent, reviewable commit with one clear
+purpose. Split by purpose or implementation stage whenever safe. A shared feature,
+file, or dependency does not by itself require one commit for all related work.
 
-- Keep implementation, its tests, required configuration, dependency manifests
-  and lockfiles, and associated documentation together.
-- Changes in the same file belong to the same group. Do not split by hunks or
-  force refactors and features in the same file into separate branches.
-- Merge groups that depend on one another, including dependencies across modules.
-  Separate file paths alone do not establish independence.
-- Split only when each group works from the captured starting SHA without any other
-  group's changes. If independence is uncertain, keep the changes together.
+- Keep tests with the behavior they verify, along with configuration, dependencies,
+  and documentation required for that step. Keep dependency manifests and their
+  lockfiles synchronized. Separate prerequisite refactors, implementation, caller
+  integration, or substantial documentation when each step is coherent.
+- In current branch mode, order commits on the starting branch. A group may depend
+  on earlier groups; evaluate its tree against the previous commit, not only the
+  starting SHA or the fully changed working tree. Each commit must leave the project
+  working; never defer a required fix, test update, or configuration to a later group.
+- In current branch mode, a text file may appear in multiple groups. Assign every
+  captured change exactly once and record each group's exact patch relative to its
+  expected parent. For a new text file, the first patch creates it; later patches
+  modify it. Split only when these intermediate states can be staged safely without
+  editing working files. Otherwise keep that file's changes together and explain why.
+- In PR modes, each group becomes an independently usable branch with one commit
+  from the captured starting SHA. Assign every changed path to exactly one group;
+  keep shared-file changes together and merge dependent groups. If independence is
+  uncertain, keep the changes together. Do not create stacked PRs in these modes.
+- Keep renames (both paths), deletions, binary assets, and generated files such as
+  lockfiles whole. Do not split merely by artifact type or to meet a line count.
+- Estimate added plus deleted lines of non-generated text for each group. Above
+  400 lines, reconsider smaller coherent groups and explain any remaining large
+  group. This is a review threshold, not a hard limit or a reason to break a step.
 
-Present the planned groups and their paths before mutating the index. Explain
-that existing staged and unstaged edits are both included and staging boundaries
-will be cleared; their file contents are preserved. Proceed within the invoked
-workflow without another approval request.
+Present the ordered groups, purposes, paths, estimated sizes, and any reasons a
+group cannot be split before mutating the index. Explain that existing staged and
+unstaged edits are both included and staging boundaries will be cleared; their
+file contents are preserved. Proceed within the invoked workflow without another
+approval request. Combined-workspace test results do not establish that an
+intermediate commit passed; label supplied evidence and relevant pending checks.
 
 ### Phase 3: Generate messages and names
 
@@ -218,19 +236,53 @@ git checkout -b '{branch-name}' '{base-sha}'
 
 In all modes, verify that remaining files still match the captured contents;
 stop on unexpected changes. Clear the entire index with plain `git reset`, which
-preserves working files, then stage only this group's explicit paths (including
-deletions):
+preserves working files:
 
 ```bash
 git reset
+```
+
+For paths assigned wholly to this group, stage only their explicit paths
+(including deletions). Omit this command if the group has no whole-file changes:
+
+```bash
 git add -- {files in this group only}
+```
+
+In current branch mode, stage partial text changes using the exact planned patch
+against `{expected-parent}`. Never run `git add` on a path shared with later groups;
+it would include those later edits. Use Git-normalized content and retain valid
+context. If a patch cannot safely represent a step, revise the grouping before
+committing. For each partial patch, check it against the current index, then apply
+the same patch to the index only:
+
+```bash
+git apply --cached --check <<'ULTRAPOWERS_COMMIT_PATCH'
+{group-patch}
+ULTRAPOWERS_COMMIT_PATCH
+```
+
+```bash
+git apply --cached <<'ULTRAPOWERS_COMMIT_PATCH'
+{group-patch}
+ULTRAPOWERS_COMMIT_PATCH
+```
+
+Choose a quoted delimiter absent from the patch as a complete line. Do not use
+interactive staging, edit working files, or apply a patch to the working tree.
+An invalid patch must stop before committing. After staging, recheck working-file
+hashes and inspect the entire index in all modes:
+
+```bash
 git diff --no-ext-diff --no-textconv --cached --name-status
 git diff --no-ext-diff --no-textconv --cached
 git diff --no-ext-diff --no-textconv --cached --check
 ```
 
 Verify HEAD equals `{expected-parent}` and the entire staged diff matches exactly
-this group's captured change, with no extra paths, omitted changes, or secrets. Do
+this group's planned change, including partial patches, with no extra paths,
+omitted changes, or secrets. Track committed portions separately from remaining
+portions; unchanged working-file hashes also apply to files shared across groups. Do
 not use `git add .`, `git add -A`, globs, or `git commit -a`. An empty or mismatched
 staged diff must stop; do not commit or publish it.
 
@@ -263,7 +315,10 @@ Require its parent SHA to equal `{expected-parent}` and its full diff to match
 only the intended group. Recheck for secrets and verify remaining files against
 the capture. If hooks changed committed contents or left unexpected working
 changes, stop and report the discrepancy rather than amending or publishing an
-uninspected result. For each binary path, also inspect the committed tree:
+uninspected result. For added or modified text paths whose last planned group has
+just been committed, use `git ls-tree HEAD -- '{path}'` to require the committed
+blob to match the captured expected final Git blob. This check runs before any
+push in PR modes. For each binary path, also inspect the committed tree:
 
 ```bash
 git ls-tree HEAD -- '{path}'
@@ -345,6 +400,11 @@ preserve the local branch and report whether the push already succeeded.
 
 After all groups succeed, require `git status --short --untracked-files=all` to
 be empty. If changes remain, stop and report them without discarding anything.
+In current branch mode, for every captured added or modified text file, use
+`git ls-tree HEAD -- '{path}'` to require its final committed blob to match the
+captured expected Git blob; deleted paths must be absent. This verifies that all
+partial commits compose to the original captured change, including repository
+normalization. Stop on a mismatch. PR modes verify text blobs per group before push.
 In current branch mode, stay on `{base-branch}` and verify HEAD and the branch
 ref equal the last verified commit SHA. Do not require HEAD to equal the original
 `{base-sha}` after making local commits.

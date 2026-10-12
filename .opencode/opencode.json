@@ -121,6 +121,8 @@
           "git checkout -b *": "allow",
           "git switch -- *": "allow",
           "git add -- *": "allow",
+          "git apply": "deny",
+          "git apply *": "deny",
           "git commit --file=-*": "allow",
           "git push -u origin refs/heads/*:refs/heads/*": "allow",
           "git push -u origin 'refs/heads/*:refs/heads/*'": "allow",
@@ -145,7 +147,9 @@
           "git -c *": "deny",
           "ssh *": "deny",
           "ssh -G *": "allow",
-          "git commit --file=- <<'ULTRAPOWERS_COMMIT_MESSAGE'\n*": "allow"
+          "git commit --file=- <<'ULTRAPOWERS_COMMIT_MESSAGE'\n*": "allow",
+          "git apply --cached --check <<'ULTRAPOWERS_COMMIT_PATCH'\n*": "allow",
+          "git apply --cached <<'ULTRAPOWERS_COMMIT_PATCH'\n*": "allow"
         }
       }
     }
