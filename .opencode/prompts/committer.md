@@ -182,9 +182,11 @@ Choose `feat`, `fix`, `refactor`, `perf`, `test`, `docs`, `build`, `ci`, `chore`
 `style` from the group's behavior. Use the behavior change's type when a necessary
 refactor is included. Keep subjects under 72 characters, without a trailing period.
 
-The commit body starts with `[Auto-generated analysis]` and explains the evidenced
-problem, resulting behavior, and relevant trade-offs. Mark uncertain rationale
-as inference. Include `BREAKING CHANGE: ...` when applicable.
+Never add auto-generated labels, analysis markers, or generation attribution to
+commit messages, PR titles, or PR descriptions. Add a brief commit body only when
+it provides useful context beyond the subject: the evidenced problem, resulting
+behavior, or necessary trade-offs. Do not invent rationale or repeat the subject.
+Include `BREAKING CHANGE: ...` when applicable.
 
 In PRs with prefix mode, branch names are `{type}/{prefix}-{slug}`. In PRs without
 prefix mode, use `{type}/{slug}`. Use a lowercase hyphenated slug, about 30
@@ -282,12 +284,47 @@ git push -u origin 'refs/heads/{branch-name}:refs/heads/{branch-name}'
 ```
 
 The title is the Conventional Commit subject, preceded by the prefix only in
-PRs with prefix mode. The body starts with `[Auto-generated PR description]` and
-describes the problem, resulting behavior, relevant risks, and actual verification
-evidence. Distinguish previous workspace checks from checks on this independent
-branch; list missing
-checks as pending. In prefixed mode, use `Refs: ZE-1659` for an external issue
-prefix, and GitHub `#123` syntax only for a known GitHub issue number.
+PRs with prefix mode. Start the body with `## What?` and use this Markdown
+template in the given order:
+
+```markdown
+## What?
+{Concrete behavior or outcome changed.}
+
+## Why?
+{Problem this solves or reason for the change.}
+
+## How?
+{Key implementation details needed to understand the change.}
+
+## Testing?
+{Supplied checks and their actual results; relevant pending checks.}
+
+## Screenshots (optional)
+{Relevant supplied screenshots.}
+
+## Anything Else?
+{Relevant rollout, rollback, compatibility notes, risks, or issue references.}
+```
+
+Replace all placeholders with specific, evidenced content. Use a short paragraph
+or a few brief bullets per section; simple sections usually need one sentence.
+Scale detail to the change. Avoid filler, repeated explanations across sections,
+speculative risks, and exhaustive file inventories. Do not invent rationale.
+Omit the screenshots section when no relevant screenshots are available. Use
+`None.` under `## Anything Else?` when there is nothing to add.
+
+Under `## Testing?`, report only validation results supplied by the user or an
+implementation handoff. Label previous workspace checks as such; do not imply
+they ran on this independent branch. If no results were supplied, say
+`No test results supplied.` once. List only relevant missing checks as pending.
+Keep routine Git bookkeeping (parent SHA, path and hash comparisons, and branch
+creation) in the final workflow report, not in the PR's testing evidence.
+
+Under `## Anything Else?`, include `Binary contents not reviewed: {paths}` when
+required by the binary-assets rules. In prefixed mode, include `Refs: ZE-1659`
+for an external issue prefix; use GitHub `#123` syntax only for a known GitHub
+issue number.
 
 ```bash
 gh pr create --draft \

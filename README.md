@@ -213,6 +213,27 @@ reports partial progress while preserving work and created branches. It reports
 supplied validation evidence and pending checks; it does not run tests or infer
 that an independent branch passed tests from a combined workspace run.
 
+Commit messages and PR titles/descriptions have no auto-generated labels or
+analysis markers. Commit bodies add brief context only when the subject needs it.
+PR descriptions use these Markdown headings in order:
+
+```markdown
+## What?
+## Why?
+## How?
+## Testing?
+## Screenshots (optional)
+## Anything Else?
+```
+
+Each section uses specific facts in a short paragraph or a few brief bullets,
+without repeating explanations or padding the description. Testing lists supplied
+checks and results, labels previous workspace checks, and names relevant pending
+checks. When no results were supplied, it says `No test results supplied.` once.
+Routine Git bookkeeping stays in the final workflow report. Screenshots are omitted
+when unavailable; Anything Else contains relevant rollout, rollback, compatibility,
+binary inspection limits, or issue references, or `None.` when there are no extras.
+
 Mode selection, grouping, credential inspection, and state comparisons are agent
 instructions, not a custom scheduler or secret scanner. OpenCode enforces the
 configured tool and sensitive-file read permissions. **Quit and restart OpenCode
