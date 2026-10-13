@@ -8,6 +8,46 @@
       "description": "Review agent for checking code quality, architecture, and risks.",
       "prompt": "{file:prompts/reviewer.md}"
     },
+    "ultrapowers-planner": {
+      "mode": "primary",
+      "description": "Splits large tasks into self-contained parallel implementation plans with isolated Git worktrees, staged integration, and cleanup.",
+      "prompt": "{file:prompts/parallel-planner.md}",
+      "permission": {
+        "*": "deny",
+        "external_directory": "ask",
+        "edit": {
+          "*": "deny",
+          ".opencode/plans/**/*.md": "allow"
+        },
+        "read": {
+          "*": "allow",
+          "*.env": "ask",
+          "*.env.*": "ask",
+          "*.env.example": "allow"
+        },
+        "glob": "allow",
+        "grep": "allow",
+        "list": "allow",
+        "lsp": "allow",
+        "skill": "allow",
+        "webfetch": "allow",
+        "websearch": "allow",
+        "context7_*": "allow",
+        "todowrite": "allow",
+        "question": "allow",
+        "bash": {
+          "*": "deny",
+          "git rev-parse --show-toplevel": "allow",
+          "git rev-parse --verify HEAD": "allow",
+          "git symbolic-ref --short HEAD": "allow",
+          "git status --short --untracked-files=all": "allow",
+          "git diff --no-ext-diff --no-textconv --binary --cached": "allow",
+          "git diff --no-ext-diff --no-textconv --binary": "allow",
+          "git ls-files --stage": "allow",
+          "git worktree list --porcelain": "allow"
+        }
+      }
+    },
     "ultrapowers-judge": {
       "mode": "primary",
       "description": "Plans work, delegates implementation to general, and judges two independent reviewers through a bounded dual-review loop.",
@@ -156,6 +196,12 @@
     }
   },
   "command": {
+    "parallel-plan": {
+      "agent": "ultrapowers-planner",
+      "subtask": false,
+      "description": "Write independent task plans for parallel worktrees and a final plan that stages integration on the original branch and cleans up.",
+      "template": "Create a persistent parallel implementation plan using the planner workflow. Write self-contained worker plans and a final integration plan; the user will assign them to separate implementation sessions. Final integration must leave the combined changes staged on the original branch for the user to review and commit, and clean up this job's worktrees.\nTask: $ARGUMENTS"
+    },
     "dual-review": {
       "agent": "ultrapowers-judge",
       "subtask": false,

@@ -146,6 +146,72 @@ an active workflow. General finishes before a snapshot is captured, and both
 reviewers finish before any fixes or checks are delegated. The full protocol is in
 [dual-review.md](.opencode/instructions/dual-review.md).
 
+## Parallel planning
+
+Use `/parallel-plan <task>` or select `ultrapowers-planner` to split a large task
+into plans you can assign to separate implementation sessions:
+
+```text
+/parallel-plan Add project invitations with API endpoints, email delivery, and management screens
+```
+
+The planner uses your selected model and writes a unique bundle in the active
+project. It can write Markdown under `.opencode/plans/` and inspect the project;
+source edits, Git writes, and delegation are denied by its default permissions.
+
+```text
+.opencode/plans/<job>/
+  overview.md
+  01-<task>.md
+  02-<task>.md
+  99-integrate.md
+  results/              # Worker reports and patches are added during execution
+```
+
+The overview lists file ownership, shared interfaces, dependencies, and waves
+of tasks that can run together. Each task file contains its own context, owned
+files, prerequisite paths, worktree setup, acceptance criteria, checks, and
+handoff instructions. Foundation work finishes before tasks that use it. The
+planner uses a sequential plan when there is no safe parallel split.
+
+1. Open the overview and start a fresh **build** session for each ready task.
+   Assign it with `Implement the task in @<absolute-task-plan-path>`. The
+   planner provides resolved paths and copyable assignment prompts.
+2. Each worker creates its own detached Git worktree outside your checkout,
+   applies completed prerequisite patches, implements its owned files, and
+   runs its checks. Commands and source edits explicitly target that worktree.
+   A dependent task exports only its additional changes, so prerequisites are
+   not duplicated. Workers save their reports and patches in the original plan
+   directory and keep their completed worktrees frozen until integration.
+3. Once all tasks are complete, assign `Execute @<absolute-integration-plan-path>`
+   to one build session. It assembles the patches in a separate integration
+   worktree, completes wiring, and runs the combined checks.
+4. Integration applies the tested result to **your original branch and staging
+   area**, verifies the staged tree, and removes this job's worker and integration
+   worktrees. You review `git diff --cached` and commit the result yourself.
+   Plans and recovery patches remain available after cleanup.
+
+Execution requires a named branch with an existing commit and a clean source
+and index baseline. Untracked plan artifacts may remain. Existing source changes
+are preserved and reported as a setup blocker; the planner does not stash or
+commit them. A changed original branch, HEAD, or source state blocks transfer.
+Failed checks or unexpected worker files preserve the worktrees for recovery;
+cleanup resumes after the work is verified. A partially completed cleanup is
+reported as `CLEANUP_PENDING`, not success. Submodule-content changes require a
+different handoff and are reported as a planning blocker.
+
+The worker and integration plans use the implementation agent's existing
+permissions. Native directory approval may be needed for sibling worktrees.
+Assign one session per task and one final integration session. Ownership,
+readiness, and dependency checks are agent instructions; this feature does not
+automatically launch or schedule workers. Isolated worktrees prevent agents
+from overwriting each other's files, while integration checks catch incompatible
+behavior across tasks.
+
+**Quit and restart OpenCode to load the planner and command.** When developing
+from this checkout, consuming projects can load its `index.js` through a local
+plugin path; a plugin pinned to an older Git revision must be updated separately.
+
 ## Committer
 
 Use `/commit` when implementation and validation are complete. Every invocation
@@ -275,6 +341,17 @@ project configuration.
 npm ci
 npm test
 ```
+
+`test/parallel-plan.test.js` checks planner/command registration and executes the
+Git recipes from the planner prompt in disposable repositories. It covers
+independent and dependent workers, new text and binary files, deletions, final
+staging without advancing HEAD, worktree cleanup, and refusal to discard changed
+or ignored files. It also checks that native OpenCode permissions allow plan
+files while denying source edits and Git writes when OpenCode is installed.
+These checks do not invoke models or establish that a model always produces a
+correct decomposition. For interactive acceptance, run `/parallel-plan` in a
+disposable clean repository, assign its ready tasks to separate build sessions,
+then run its integration plan and inspect the staged result and worktree list.
 
 The tests in `test/committer.test.js` use Node's built-in test runner and isolated
 temporary Git repositories to execute the committer prompt's partial-staging
