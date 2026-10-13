@@ -84,6 +84,7 @@
       "prompt": "{file:prompts/committer.md}",
       "permission": {
         "*": "deny",
+        "external_directory": "ask",
         "read": {
           "*": "allow",
           "*.env": "deny",

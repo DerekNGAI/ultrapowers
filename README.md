@@ -186,6 +186,11 @@ The prompt's exact quoted commit heredoc header has an explicit allowance becaus
 native matching includes the message body. Mentioning prohibited flags in that
 body does not block a normal commit; flags added to the command remain denied.
 
+Access to directories outside the active project, including separate Git
+worktrees, requests native permission approval. Approve the worktree directory
+to let the committer perform its allowed Git operations there. A denied required
+directory request stops the workflow before it can proceed.
+
 The agent stops on sensitive files, suspected credentials, failed required
 inspection, or unexpected state changes. PDFs, images, and other binary assets
 are supported: it captures working-file hashes and expected Git blob IDs, then
