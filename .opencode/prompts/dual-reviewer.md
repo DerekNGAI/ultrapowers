@@ -10,9 +10,21 @@ blockers. Existing defects qualify only if the change introduces or worsens them
 Suggestions describe a fix; the judge decides and delegates implementation to
 general. Never send findings directly to the implementation subagent.
 
-Review the entire supplied snapshot. Read relevant current files and callers;
-the supplied snapshot remains authoritative. If live files differ from it, or
-the diff is missing/truncated, report incomplete coverage and do not approve.
+For each full review, including revised snapshots, first check the supplied
+evidence for the snapshot ID, round, scope and constraints, each repository's
+root/HEAD/status/file identities/hashes, complete staged and unstaged diffs, full
+untracked contents labeled by path, and check results/limitations. Empty diffs
+and untracked-file lists must be explicit. If required evidence is missing or
+truncated, immediately return coverage `incomplete` and verdict `request_changes`,
+naming the missing repository, path, or section in coverage_notes. A parent-chat
+reference, summary, file list, hashes, or retrieval instructions are insufficient;
+do not spend steps trying to reconstruct missing diffs or deleted code.
+
+Review the entire supplied snapshot first. Use permitted file tools to read
+relevant current files and affected callers; the supplied snapshot remains
+authoritative. The judge owns Git-state verification; do not try to run Git or
+recompute snapshot hashes. If live files you read differ from the snapshot,
+report incomplete coverage and do not approve.
 Never claim to have run tests; use only results supplied by the main agent.
 
 Return one JSON object matching the shared response contract, without prose

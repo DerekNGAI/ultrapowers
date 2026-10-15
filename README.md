@@ -116,6 +116,18 @@ in the judge's conversation, so large diffs still use its context. Delegation
 reduces implementation context in the judge; it does not guarantee lower total
 token usage across all agents.
 
+Before each full review, including revised snapshots, the judge copies the same
+complete evidence block directly into both reviewer Task prompts. It includes
+the snapshot ID, scope, each repository's absolute root/HEAD/status/file hashes,
+complete staged and unstaged diffs, full untracked contents labeled by path, and
+check commands, results, and limitations. Empty diffs and lists are explicit.
+Reviewers do not inherit the judge's conversation and cannot run Git to recover
+missing or deleted code. The judge checks that every changed path is covered
+before launching either reviewer and reports `INCOMPLETE` if required evidence
+is unavailable, restricted, truncated, or too large for either reviewer's context.
+Reviewers use file tools for affected callers; the judge verifies Git state.
+These handoff checks are agent instructions, not runtime completeness enforcement.
+
 The final report includes both reviewer verdicts and a finding table showing
 fixed issues, explicit withdrawals, remaining disputes, deferred nits, and fixes
 that still need review. Overall outcomes are `APPROVED`, `ROUND_LIMIT`,
@@ -399,18 +411,24 @@ subagent requests.
 
 For a live acceptance check with two configured models:
 
-1. Prepare a small change with an observable defect and a check reproducing it.
-   Run `/dual-review` and confirm both reviewers inspect the same snapshot.
+1. Prepare a disposable repository with a deleted tracked file, a staged-only
+   change, and a non-ignored untracked file. Seed an observable defect and a check
+   reproducing it, then run `/dual-review`. Inspect both child sessions: each Task
+   prompt must contain the same complete evidence, including the removed code
+   and untracked contents. Both reviewers should identify the defect using that
+   evidence and permitted file tools, without trying to run Git or reconstruct
+   missing diffs. Missing evidence must yield specific incomplete coverage.
 2. Confirm the judge records reasons for its decisions, delegates valid fixes and
    checks to general, waits for completion, verifies the resulting diff, and
-   sends the revised snapshot back to both reviewers. Confirm implementation
+   sends the complete revised snapshot back to both reviewers. Confirm implementation
    follow-ups resume the same general session and reviewers remain independent.
 3. If a false positive occurs, confirm the rejection goes only to its owner,
    which withdraws or keeps it with additional evidence. Repeated evidence
    alone must not sustain an objection.
 4. Check that nits-only reviews approve, and an unresolved blocker ends at round
    three with a dispute in the final table. A fix after the final review must be
-   labeled unverified instead of inheriting an earlier approval.
+   labeled unverified instead of inheriting an earlier approval. Confirm the judge
+   rechecks Git state before approval.
 
 Passing the loader tests alone does not establish that a chosen model follows
 the protocol. Real reviewer output is deliberately not predetermined.

@@ -21,6 +21,32 @@ to finish before capturing a review snapshot or launching reviewers. Never call
 general while either reviewer is working. Verify the resulting diff against the
 delegated scope and capture a fresh snapshot after implementation or fixes.
 
+Before each full review, including revised snapshots sent to resumed sessions,
+build one complete evidence block and copy it verbatim into BOTH Task prompts.
+Use this reviewer brief, filling every field with captured evidence:
+
+- Snapshot: S1, S2, or S3; round; review scope and constraints.
+- For EACH repository, separately: absolute root; HEAD (or empty-tree baseline);
+  complete `git status --short --untracked-files=all` output; changed file
+  identities and available content hashes (mark deleted working files absent).
+- For EACH repository: complete staged diff, complete unstaged diff, and full
+  contents of every non-ignored untracked file, each labeled with its path.
+  Explicitly label empty diffs and empty untracked-file lists.
+- Checks: exact commands, results, and limitations; distinguish current checks
+  from earlier results and checks not run. Include known coverage limits.
+- Task: review this entire snapshot using the shared response contract; use
+  permitted file tools for affected callers. The judge verifies Git state.
+
+Check the block against the captured status and untracked-file list before
+launching either reviewer: account for every changed path, include deleted code
+from the diffs, and load all truncated capture output. A file list, hashes,
+summary, parent-conversation reference, artifact path, or retrieval instructions
+cannot replace the actual captured diffs and untracked contents. Reviewers have
+no shell access and do not inherit the judge's conversation. If required evidence
+is unavailable, restricted, truncated, or cannot fit in either reviewer's context,
+stop before launching them and report INCOMPLETE with the specific missing
+evidence. Honor read restrictions; never copy restricted content into a brief.
+
 Show the user the reviewer model IDs and families from preflight, the current
 round and snapshot, both verdicts, and your decision and concrete reason for each
 finding. Send both reviewer tasks concurrently in the same tool-call message;
