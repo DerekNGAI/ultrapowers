@@ -254,20 +254,29 @@ keeps the original origin for fetching and pushing. SSH connection commands
 remain denied.
 
 Git inspection permissions cover command families, including `git diff`,
-`git status`, `git rev-parse`, `git log`, and blob/index inspection. Option order
-and quoted arguments do not need separate inspection rules. Unexpected shell
-commands request native approval; destructive resets, restores, cleaning, branch
-deletion, amended commits, hook bypasses, force pushes, and Git configuration
-changes remain denied. Skills are available for optional document inspection.
-Fetch and push permissions still target origin and the workflow's explicit refs.
-The prompt's exact quoted commit heredoc header has an explicit allowance because
-native matching includes the message body. Mentioning prohibited flags in that
-body does not block a normal commit; flags added to the command remain denied.
+`git status`, `git rev-parse`, `git log`, `git show`, `git ls-remote`, branch
+listing, and blob/index inspection. Origin fetches and pushes, branch creation
+and switching, commits, GitHub PR inspection, and PR creation allow normal option
+ordering and quoted arguments. The workflow still requires explicit paths for
+staging, explicit refs for pushes, and draft PRs. Unexpected shell commands request
+native approval; destructive resets, restores, cleaning, branch deletion, amended
+commits, hook bypasses, force pushes, remote deletion, and Git configuration changes
+remain denied. Branch deletion rules match flag boundaries, so branch names such
+as `fix/ZE-1636-bank-drilldown-order` do not trigger a deletion denial.
+Skills are available for optional document inspection.
+Compatibility entries preserve rule ordering when an older pinned copy of the
+plugin is also loaded.
+Quoted heredocs for stdin commit messages and index-only patches have explicit
+allowances, including custom delimiters, because native matching includes their
+bodies. Mentioning prohibited flags in a commit body does not block a normal
+commit; flags added to the command remain denied.
 
-Access to directories outside the active project, including separate Git
-worktrees, requests native permission approval. Approve the worktree directory
-to let the committer perform its allowed Git operations there. A denied required
-directory request stops the workflow before it can proceed.
+The committer can access directories outside the active project, including
+separate Git worktrees, without another directory approval. Its tool permissions,
+sensitive-file restrictions, and selected workflow still apply there. Other agents
+retain their own directory permissions. Quit and restart OpenCode after changing
+configuration. Installations pinned to an older plugin revision need an updated
+revision or an agent permission override in their own OpenCode configuration.
 
 The agent stops on sensitive files, suspected credentials, failed required
 inspection, or unexpected state changes. PDFs, images, and other binary assets
@@ -364,6 +373,12 @@ These checks do not invoke models or establish that a model always produces a
 correct decomposition. For interactive acceptance, run `/parallel-plan` in a
 disposable clean repository, assign its ready tasks to separate build sessions,
 then run its integration plan and inspect the staged result and worktree list.
+
+`test/committer-permissions.test.js` checks routine command variations, the
+drilldown branch-name regression, external directory access, and destructive-command
+and secret-read restrictions. When OpenCode is installed, it also runs a compound
+inspection command through the native Bash tool in a disposable local repository.
+It makes no model calls, remote pushes, or GitHub requests.
 
 The tests in `test/committer.test.js` use Node's built-in test runner and isolated
 temporary Git repositories to execute the committer prompt's partial-staging
