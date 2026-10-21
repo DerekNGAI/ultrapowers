@@ -138,9 +138,10 @@ same final snapshot and the required checks to pass.
 
 The shared protocol permits three full reviews and one rebuttal per reviewer in
 each round. The package additionally enforces six Task calls per reviewer per
-invocation, including resumed sessions, with native step budgets of 80 for the
-judge and 30 for each reviewer. General calls do not consume the reviewer
-budget. A new explicit judge request or
+invocation, including resumed sessions. The judge and reviewers have no default
+step limit, allowing them to finish inspecting and verifying each snapshot.
+Set `agent.<name>.steps` in your OpenCode config if you need a per-agent limit.
+General calls do not consume the reviewer budget. A new explicit judge request or
 `/dual-review` invocation starts a new budget; synthetic continuation messages
 preserve it. A new request to another agent ends the workflow's implementation
 gate. A denied call requires the judge to stop and summarize.
