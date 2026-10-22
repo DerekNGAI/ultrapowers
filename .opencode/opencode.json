@@ -70,18 +70,7 @@
         "websearch": "allow",
         "todowrite": "allow",
         "question": "allow",
-        "bash": {
-          "*": "deny",
-          "git rev-parse --show-toplevel": "allow",
-          "git rev-parse HEAD": "allow",
-          "git rev-parse --verify HEAD": "allow",
-          "git status --short --untracked-files=all": "allow",
-          "git diff --no-ext-diff --no-textconv --binary --cached": "allow",
-          "git diff --no-ext-diff --no-textconv --binary": "allow",
-          "git hash-object -- *": "allow",
-          "git ls-files --others --exclude-standard": "allow",
-          "git ls-files --others --exclude-standard -z": "allow"
-        },
+        "bash": "allow",
         "task": {
           "*": "deny",
           "general": "allow",
