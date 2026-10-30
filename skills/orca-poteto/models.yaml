@@ -1,0 +1,9 @@
+implementation:
+  agent: codex
+  model: gpt-6.1-sol
+  effort: high
+
+review:
+  agent: grok
+  model: grok-4.6
+  effort: xhigh
