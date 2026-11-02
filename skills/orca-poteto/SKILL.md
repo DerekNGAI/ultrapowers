@@ -1,15 +1,15 @@
 ---
 name: orca-poteto
-description: Run multi-agent engineering work with Orca as the only coordinator and poteto-mode as the engineering standard for every worker. Use for /orca-poteto, or when asked to coordinate Orca workers that work in poteto's style.
+description: Coordinate Orca workers that run poteto-mode in separate sessions. The coordinator uses orchestration, and each worker owns its engineering workflow. Use for /orca-poteto, or when asked to coordinate Orca workers that work in poteto's style.
 disable-model-invocation: true
 ---
 
 # Orca + poteto
 
-This skill is a thin wrapper. It sets the boundary between two installed skills and adds a permission contract for workers. It does not copy either skill. Load both from their installed copies at the start of every run, so their updates apply:
+This wrapper separates Orca coordination from poteto engineering. Its rules apply only to this run and its workers. Leave the installed `orchestration` and `poteto-mode` skills and their standalone settings unchanged.
 
-- **orchestration** (Orca). Resolve the executable per the installed `orchestration` skill, then run `ORCA skills get orchestration`. The binary serves the version-matched guide.
-- **poteto-mode** (poteto). Read its installed `SKILL.md` in full, then the playbooks and principle skills it routes to.
+- **Coordinator.** Load the installed `orchestration` skill, resolve its executable, then run `ORCA skills get orchestration`. Follow that version-matched guide and this wrapper. Locate the installed `poteto-mode/SKILL.md` without loading its contents or routed skills into the coordinator session.
+- **Workers.** Start separate sessions with bounded task briefs and the needed file pointers. Each worker loads the installed poteto skill and selects its own per-unit playbook. Pass the absolute skill path and the [worker contract](references/worker-contract.md) in the brief instead of the coordinator's full transcript or this coordinator guide.
 
 Status: a recommended adaptation, not a tested integration. If a rule here contradicts the current behavior of either skill, stop and report the conflict to the user. Do not improvise a merge of the two.
 
@@ -17,8 +17,9 @@ Status: a recommended adaptation, not a tested integration. If a rule here contr
 
 | Concern | Owner |
 | --- | --- |
-| Workers, task dependencies, messages, questions, completion, cleanup | Orca |
-| Design, implementation, verification, commits, PR descriptions | poteto |
+| Workers, task dependencies, messages, questions, completion, cleanup | Orca coordinator |
+| Design, implementation, verification, prescribed reviews, commits, PR descriptions | poteto workers |
+| Acceptance evidence and integration between workers' deliverables | Orca coordinator |
 | Commit, push, and PR authorization | The worker's brief, per this skill |
 | Merge | The user. This skill never grants it. |
 
@@ -62,35 +63,35 @@ If Orca cannot apply the overrides but the selected agent's CLI can, read `refer
 
 `ORCA` above means the executable resolved by the installed orchestration skill. Use this path only on a host whose terminal commands can target the intended workspace. If no verified route exists, stop the unit and ask for an alternative, without changing runtimes or global settings.
 
-A short-lived harness helper is allowed only if it can honor the resolved agent, model, and effort. Otherwise the worker asks the coordinator to dispatch that helper through Orca; it does not start an Orca worker itself. A model override alone does not change a helper's runtime.
-
 Compare Orca's `launch.requested` and `launch.effective` before claiming a fresh launch honored the policy. For an attached terminal, null launch overrides are not proof of model or effort: verify the runtime and actual session settings from agent metadata or CLI output. Requested flags alone are not effective-setting evidence. Reuse a terminal only when its agent, model, and effort are verified to match; `--terminal` cannot change them. Report requested and effective choices, inheritance, and any unavailable or unverifiable status.
 
 ## One coordinator
 
-Orca is the only coordinator. poteto runs inside each unit of work, never above it.
+Orca owns coordination across tasks. Each poteto worker owns the engineering workflow for its assigned unit, including its prescribed reviews and short-lived helpers.
 
-- Do not run poteto's Orchestrate, Autopilot-full, or Autopilot-stack playbooks, or its `scripts/orch` store. When poteto's routing picks one of them, run Orca's supervised loop instead and apply poteto's per-unit playbook (Feature, Bug fix, Refactoring, and so on) inside each worker.
 - Start every unit of work with `orchestration worker-start`. Never start a unit with the harness subagent tool (`Agent`, `Task`, `spawn_agent`).
-- A worker may use poteto's short-lived helpers that finish inside its own turn, such as `interrogate`, `architect`, or `swarm` verification. A worker does not start Orca workers.
-- A worker asks questions with the `ask` command from its Orca preamble, never with a local question tool. poteto's question rules still decide whether a question is worth asking.
-- A worker reports completion once, with `worker_done`. It writes poteto's full reply to a file and passes that file as `--report-path`.
+- Read the [worker contract](references/worker-contract.md) before writing briefs. It defines the worker's coordination, model, permission, and completion rules without loading poteto into the coordinator.
+- Dispatch a helper through Orca when a worker's prescribed workflow requires a runtime its local helper tool cannot provide. The worker retains ownership of that workflow.
+- Check acceptance evidence and integration between deliverables. Count the worker's completed design and reviews toward that task instead of repeating those phases at the coordinator level. Dispatch additional engineering review for a worker request, a user request, or a concrete integration risk.
 - The coordinator reuses, retains, or releases each settled worker per Orca's completion accounting.
 
 ## Coordinator steps
 
-1. Load both skills and the sibling `models.yaml`. Resolve the Model configuration for this run.
-2. Split the request into units. For each unit, pick its implementation or review role, the poteto playbook, and the permissions the user granted.
-3. Write each brief per the next section. Start workers per Orca's supervised loop.
-4. Before you accept a settled unit, read its diff and its verification evidence, per poteto's Subagents section. An independent review is its own Orca task, in a separate worker session from the author.
-5. Report to the user with Orca's per-task outcome, evidence, and blockers, written per poteto's Writing the reply.
+1. Load orchestration and the sibling `models.yaml`. Resolve the Model configuration and the absolute paths to poteto and the worker contract.
+2. Split the request into bounded units. For each unit, set its goal, constraints, ownership, observable acceptance, implementation or review role, and authorized permissions. Leave playbook selection to the worker.
+3. Write each brief per the next section. Start separate worker sessions per Orca's supervised loop.
+4. Before accepting a settled unit, inspect its relevant diff and verification evidence against its acceptance criteria. If evidence is missing or a criterion fails, return that specific gap to the responsible worker. Use the review dispatch rules above for additional review.
+5. Report each task's outcome, evidence, and blockers to the user. Finish when the requested deliverables meet acceptance and Orca's completion accounting is settled.
 
 ## Worker brief
 
 Every `worker-start --spec` meets Orca's task-spec contract (Target, Change, Constraints, Ownership, Observable acceptance) and adds these fields:
 
 ```
-SKILLS       Read poteto-mode's SKILL.md in full before any work. Follow its <playbook> playbook.
+CONTRACT     Read <absolute path to references/worker-contract.md> before any work.
+SKILLS       Read <absolute path to installed poteto-mode/SKILL.md> in full.
+WORKFLOW     Select the per-unit poteto playbook or review skill for your role.
+             Own its execution, verification, and prescribed reviews within scope.
 MODEL_POLICY Include a self-contained copy of the resolved Model configuration,
              including its precedence, both roles, helper routing, and unavailable-selection rule.
 ROLE         implementation | review
@@ -106,12 +107,4 @@ REPORT       worker_done summary, plus --report-path to poteto's full reply:
              requested and effective agent/model/effort, inheritance, or unavailable status
 ```
 
-## Permissions
-
-- A missing or unclear line means no.
-- A grant covers only the named branch or base, and only the files in the brief's Ownership.
-- The coordinator grants only what the user granted to it. It cannot grant merge.
-- These lines override poteto's Autonomy section for git and forge actions. poteto's Always-pause list still applies.
-- Never, under any grant: merge, enable auto-merge, force-push, retarget an existing PR, or rebase a branch that another agent uses.
-- With `commit: yes`, poteto's commit rules apply. With `pr: yes`, poteto's Opening a PR playbook applies. The worker posts the PR URL and does not babysit or ship.
-- If the work needs a permission the brief does not grant, stop at the last allowed step and `ask` the coordinator. The coordinator asks the user.
+Grant permissions under the [worker contract](references/worker-contract.md#permissions). Carry only the user's existing authorization into the brief. Resolve an unavailable skill or contract path before dispatch.

@@ -4,14 +4,16 @@ Agent skills for multi-agent work coordinated by Orca. Each skill is a folder un
 
 ## Skills
 
-- `orca-poteto`. Orca coordinates the workers. poteto-mode sets the engineering standard inside each worker. Each worker gets explicit commit, push, and PR permissions. The skill never grants merge. Status: a recommended adaptation, not a tested integration.
+- `orca-poteto`. An Orca coordinator assigns bounded tasks to separate poteto worker sessions. Each worker selects its poteto playbook and owns implementation, verification, and prescribed reviews. Each worker gets explicit commit, push, and PR permissions. The skill never grants merge. Status: a recommended adaptation, not a tested integration.
 
 ## Requirements
 
 - Orca, with its `orchestration` skill installed.
 - poteto-mode (pstack), installed as a skill.
 
-The wrapper refers to both skills by name and loads their installed copies, so updates to either skill apply without changes here.
+The coordinator loads the installed orchestration skill. Each worker loads the installed poteto-mode skill through an absolute path in its brief. The coordinator reads acceptance evidence and checks integration between deliverables without repeating the worker's engineering phases. Additional engineering review needs a worker request, a user request, or a concrete integration risk.
+
+The wrapper leaves both underlying skills and their standalone settings unchanged. Updates to their installed copies apply on the next run.
 
 ## Configure agents and models
 
@@ -32,4 +34,4 @@ ln -s "$PWD/skills/orca-poteto" ~/.claude/skills/orca-poteto
 ln -s "$PWD/skills/orca-poteto" ~/.grok/skills/orca-poteto
 ```
 
-Use these commands only for destinations that do not already exist. If an agent has a copied installation, update its `SKILL.md` and include the sibling `models.yaml`, or link that config to the shared file. An existing conversation must reload the skill before using the updated instructions.
+Use these commands only for destinations that do not already exist. If an agent has a copied installation, update the whole skill directory, including `SKILL.md`, `references/worker-contract.md`, and the sibling `models.yaml`. Preserve any local model choices, or link that config to the shared file. Start a fresh coordinator conversation to use the updated instructions without previously loaded poteto instructions.
