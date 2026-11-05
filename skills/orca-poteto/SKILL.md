@@ -75,11 +75,21 @@ Orca owns coordination across tasks. Each poteto worker owns the engineering wor
 - Check acceptance evidence and integration between deliverables. Count the worker's completed design and reviews toward that task instead of repeating those phases at the coordinator level. Dispatch additional engineering review for a worker request, a user request, or a concrete integration risk.
 - The coordinator reuses, retains, or releases each settled worker per Orca's completion accounting.
 
+## Workspace isolation
+
+Separate sessions do not isolate files. Every worker that may modify repository files, including an editing helper, must have its own Orca-managed Git worktree and branch, distinct from the coordinator's checkout and every other active writer's checkout. Read-only workers may share a checkout while remaining read-only.
+
+1. Resolve the Git repositories each unit may modify with `ORCA repo list --json` and repository discovery. A project folder or Orca group containing multiple repositories is not one Git repository. Record ownership per repository.
+2. Before creating worktrees, load Orca's `references/placement-and-remote.md`. From a multi-repository project root, use `orchestration worker-start --worktree new-top-level --repo <exact-repo-selector> --name <worker-name>` with the resolved launch options. Use `new-child` only within the intended Git repository, following that guide. Folder workspaces cannot become Git worktrees; never initialize the project folder as a repository to bypass this restriction.
+3. For a unit that edits several repositories, provide an isolated checkout for every writable repository through supported Orca placement commands. A worktree for one repository does not isolate its siblings. If the supported commands cannot provide the required placement, split the unit into per-repository workers or report the placement blocker before edits.
+4. Include the repository-to-worktree mapping in the brief. For a new worktree, specify its creation target until its actual path and branch are known. Verify the start receipt's repository, canonical checkout path, and branch against the intended placement and other active writers. Require the worker to verify its actual Git root and branch before its first write. A missing, mismatched, or shared writable checkout blocks edits; resolve it through Orca rather than falling back to `--worktree current` or the original sibling repositories.
+5. Reuse an existing editing worktree only for a sequential handoff after its previous writer has stopped. An attached terminal must use the same verified worktree. Keep read-only helpers in their assigned scope; route editing helpers through the coordinator for their own isolated worktrees.
+
 ## Coordinator steps
 
 1. Load orchestration and the sibling `models.yaml`. Resolve the Model configuration and the absolute paths to poteto and the worker contract.
-2. Split the request into bounded units. For each unit, set its goal, constraints, ownership, observable acceptance, implementation or review role, and authorized permissions. Leave playbook selection to the worker.
-3. Write each brief per the next section. Start separate worker sessions per Orca's supervised loop.
+2. Split the request into bounded units. For each unit, set its goal, constraints, repository ownership, observable acceptance, implementation or review role, and authorized permissions. Leave playbook selection to the worker.
+3. Write each brief per the next section. Start separate worker sessions per Orca's supervised loop, applying Workspace isolation and verifying the resulting placement.
 4. Before accepting a settled unit, inspect its relevant diff and verification evidence against its acceptance criteria. If evidence is missing or a criterion fails, return that specific gap to the responsible worker. Use the review dispatch rules above for additional review.
 5. Report each task's outcome, evidence, and blockers to the user. Finish when the requested deliverables meet acceptance and Orca's completion accounting is settled.
 
@@ -95,6 +105,10 @@ WORKFLOW     Select the per-unit poteto playbook or review skill for your role.
 MODEL_POLICY Include a self-contained copy of the resolved Model configuration,
              including its precedence, both roles, helper routing, and unavailable-selection rule.
 ROLE         implementation | review
+WORKSPACES   For each repository: exact selector, writable or read-only scope,
+             assigned worktree path and branch, or new-worktree creation target.
+             Include the coordinator's and other active writers' checkout paths.
+             Verify the actual Git root and branch before the first write.
 LAUNCH       Selected runtime, configured model name, resolved provider ID, effort,
              inherited fields, resolution evidence, and supported launch route.
 PERMISSIONS
@@ -103,7 +117,8 @@ PERMISSIONS
   pr:        no | yes, against base <branch>
   merge:     no
 REPORT       worker_done summary, plus --report-path to poteto's full reply:
-             branch, head SHA, PR URL, commands run, verdict, deviations,
+             actual repository roots, branches, head SHAs, PR URL, commands run,
+             verdict, deviations,
              requested and effective agent/model/effort, inheritance, or unavailable status
 ```
 

@@ -8,6 +8,12 @@ Select the per-unit poteto playbook or review skill for your assigned role, then
 
 Include review findings and their resolution in the completion evidence so the coordinator can check acceptance without repeating your workflow.
 
+## Workspace boundaries
+
+Before the first write, verify the actual Git root and branch for every writable repository against the brief's `WORKSPACES` mapping. Each editing worker and editing helper needs its own coordinator-assigned Orca-managed worktree and branch. For a new-worktree creation target, resolve and report the actual path and branch, and verify isolation from the coordinator and other active writers before editing. If placement is missing, mismatched, or shared with another writer, stop before writing and ask the coordinator to resolve it.
+
+Edit only the assigned checkouts. A worktree for one repository does not isolate sibling repositories in the project folder. Read-only workers and helpers may share a checkout while remaining read-only. Ask the coordinator to place any editing helper in its own worktree.
+
 ## Coordination
 
 Orca's coordinator owns task dependencies and long-lived worker sessions through orchestration. Use poteto's per-unit playbooks, such as Feature, Bug fix, and Refactoring. Route project-level work to the coordinator. Do not run poteto's Orchestrate, Autopilot-full, or Autopilot-stack playbooks, or its `scripts/orch` store.
@@ -36,4 +42,4 @@ Use the resolved choices instead of loading another copy of `models.yaml` or res
 
 Report completion once with `worker_done`. Write poteto's full reply to a file and pass it as `--report-path`.
 
-Include the branch, head SHA, PR URL if any, verification commands and results, verdict, deviations, review evidence, and remaining blockers. Report the requested and effective agent, model, and effort, including inherited fields or unavailable status.
+Include the actual Git root, branch, and head SHA for every modified repository, PR URL if any, verification commands and results, verdict, deviations, review evidence, and remaining blockers. Report the requested and effective agent, model, and effort, including inherited fields or unavailable status.
