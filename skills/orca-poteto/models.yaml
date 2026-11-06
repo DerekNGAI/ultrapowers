@@ -4,6 +4,8 @@ implementation:
   effort: high
 
 review:
-  agent: codex
-  model: gpt-6.1-terra
-  effort: max
+  - agent: codex
+    model: gpt-6.1-terra
+    effort: max
+
+review_budget: 2
