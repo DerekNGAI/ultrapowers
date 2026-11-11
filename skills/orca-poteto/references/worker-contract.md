@@ -57,6 +57,8 @@ Use the resolved choices instead of loading another copy of `models.yaml` or res
 
 ## Completion
 
-Report completion once with `worker_done`. Write poteto's full reply to a file and pass it as `--report-path`.
+Leave every assigned checkout clean, because the coordinator removes a clean worktree when the run ends and keeps a dirty one. With `commit: yes`, commit the deliverable and delete the scratch files you created. With `commit: no`, the uncommitted diff is the deliverable: leave it in place and say so in the report.
 
-Include the actual Git root, branch, and head SHA for every modified repository, PR URL if any, verification commands and results, verdict, deviations, review evidence, and remaining blockers. Report the requested and effective agent, model, and effort, including inherited fields or unavailable status. List the reviewer helpers used against `REVIEW_BUDGET` with each one's model, and any helper the coordinator dispatched for you.
+Report completion once with `worker_done`. Write poteto's full reply to a file outside every checkout and pass it as `--report-path`.
+
+Include the actual Git root, branch, head SHA, and `git status --porcelain` output for every assigned checkout, PR URL if any, verification commands and results, verdict, deviations, review evidence, and remaining blockers. Report the requested and effective agent, model, and effort, including inherited fields or unavailable status. List the reviewer helpers used against `REVIEW_BUDGET` with each one's model, and any helper the coordinator dispatched for you.

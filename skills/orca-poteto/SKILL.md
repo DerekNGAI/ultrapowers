@@ -90,7 +90,7 @@ Orca owns coordination across tasks. Each poteto worker owns the engineering wor
 - Read the [worker contract](references/worker-contract.md) before writing briefs. It defines the worker's coordination, model, permission, and completion rules without loading poteto into the coordinator.
 - Dispatch a helper through Orca only when a worker asks under the contract's [helper rules](references/worker-contract.md#helpers). The worker retains ownership of that workflow.
 - Check acceptance evidence and integration between deliverables. Count the worker's completed design and reviews toward that task instead of repeating those phases at the coordinator level. Dispatch additional engineering review for a worker request, a user request, or a concrete integration risk.
-- The coordinator reuses, retains, or releases each settled worker per Orca's completion accounting.
+- During the run, the coordinator reuses, retains, or releases each settled worker per Orca's completion accounting. [Cleanup](#cleanup) ends the run.
 
 ## Workspace isolation
 
@@ -104,11 +104,44 @@ Separate sessions do not isolate files. Every concurrent writer, including an ed
 
 ## Coordinator steps
 
-1. Load orchestration and the sibling `models.yaml`. Ask the start-of-run questions, then resolve the Model configuration and the absolute paths to poteto and the worker contract.
+1. Load orchestration and the sibling `models.yaml`. Ask the start-of-run questions, then resolve the Model configuration and the absolute paths to poteto and the worker contract. Record the Cleanup [baseline](#baseline).
 2. Split the request into bounded units. For each unit, set its goal, constraints, repository ownership, observable acceptance, implementation or review role, and authorized permissions. Leave playbook selection to the worker.
 3. Write each brief per the next section. Start separate worker sessions per Orca's supervised loop, applying Workspace isolation and verifying the resulting placement.
 4. Before accepting a settled unit, inspect its relevant diff and verification evidence against its acceptance criteria. If evidence is missing or a criterion fails, return that specific gap to the responsible worker. Use the review dispatch rules above for additional review.
-5. Report each task's outcome, evidence, and blockers to the user. Finish when the requested deliverables meet acceptance and Orca's completion accounting is settled.
+5. Check whether the run is [quiescent](#quiescent). If it is, run the Cleanup steps without asking. If it is not, keep every workspace.
+6. Report each task's outcome, evidence, and blockers to the user, then the cleanup result: each worktree removed, each one kept with its reason, each deliverable's branch, head SHA, and PR URL, and each checkout's restored branch. For a run that is not quiescent, name what it is waiting on. Finish when the requested deliverables meet acceptance and Cleanup has run.
+
+## Cleanup
+
+Cleanup returns the user's Orca to its baseline and keeps the deliverables. It is automatic: it needs no confirmation once the run is quiescent, and it waits until then.
+
+### Baseline
+
+Before the first dispatch, record the session's working directory and, for every repository in scope, the coordinator checkout's Git root, its branch or detached SHA, and its `git status --porcelain`.
+
+As the run proceeds, record every worktree, branch, and worker it creates from the start receipts: exact selector, path, branch, base, Dispatch ID, environment, and whether setup ran. Cleanup touches only these recorded resources. A reused worktree, a pre-existing branch, and anything the user created stay as they are.
+
+### Quiescent
+
+The run is quiescent when all of these hold:
+
+- Every Task is settled and every unit is accepted under Coordinator step 4.
+- `ORCA orchestration gate-list --run <run_id>` shows no pending gate, and no question, permission request, or blocker is waiting on the user.
+- `ORCA orchestration worker-list --run <run_id> --include-remote` shows no failed, unknown, or abandoned worker. Those follow Orca's recovery guide.
+- The user has not asked to keep the workspaces.
+
+An unmerged branch or an open PR is a deliverable. It survives cleanup, and the run is quiescent with it open. Check again after each user reply that settles a pending item.
+
+### Steps
+
+1. Return the session to the baseline working directory.
+2. Release each recorded worker with `ORCA orchestration worker-release --dispatch <dispatch_id>`. Orca keeps a new-worktree worker open after it finishes, so release it explicitly. A worker the user asked to keep or took over stays open, and so does its worktree.
+3. Decide which recorded worktrees are removable. A worktree is removable when `git -C <path> status --porcelain` is empty, its HEAD is on its recorded branch, and that branch's head SHA is recorded. A dirty worktree holds work that exists nowhere else, such as a `commit: no` deliverable: keep it. For a worktree on a host the coordinator cannot inspect, use the worker's reported status.
+4. Remove each removable worktree with `ORCA worktree rm --worktree <exact selector> --json`, using the start receipt's selector and environment. Add `--run-hooks` when setup ran in it, so the repository's archive hook tears down what setup created. Add `--delete-branch` only when `git rev-list --count <base>..<branch>` is 0. When Orca refuses a removal, keep that worktree and report the refusal. `--force` and `--allow-failed-archive-hook` discard work or skip teardown, so cleanup never passes them.
+5. Verify the result. `ORCA worktree list --json` no longer lists the removed worktrees, and every deliverable branch still resolves to its recorded head SHA. If a host deleted one, restore it with `git branch <branch> <sha>`.
+6. Restore each coordinator checkout whose branch differs from the baseline with `git switch <branch>`, or `git switch --detach <sha>`. Switch only when its `git status --porcelain` matches the baseline. Otherwise leave it and report the difference; the user decides what happens to uncommitted work.
+
+The Run's coordination state stays in place. `orchestration reset` belongs to the user.
 
 ## Worker brief
 
@@ -137,6 +170,7 @@ PERMISSIONS
   merge:     no
 REPORT       worker_done summary, plus --report-path to poteto's full reply:
              actual repository roots, branches, head SHAs, PR URL, commands run,
+             `git status --porcelain` per checkout,
              verdict, deviations,
              requested and effective agent/model/effort, inheritance, or unavailable status,
              reviewer helpers used against REVIEW_BUDGET with each one's model
