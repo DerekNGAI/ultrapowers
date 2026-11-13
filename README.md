@@ -24,6 +24,8 @@ Edit [`skills/orca-poteto/models.yaml`](skills/orca-poteto/models.yaml). Each ro
 
 The skill resolves short names against that agent's available models on the execution host. It prefers the agent's configured provider when unambiguous and asks for a full ID when it cannot select one match. The `agent` field fixes the runtime, so a model choice cannot silently switch reviewers to another agent.
 
+At the start of a run the coordinator splits the request into units and proposes an implementation model for each one. It reads the models the host can launch, looks them up on the leaderboard at `ranking_source`, and rates each unit's demand: a hard unit gets the top-ranked model, an ordinary unit gets the `implementation` entry, and a mechanical unit gets a cheaper choice. You approve or edit the table once before anything is dispatched. The ranking is saved at `~/.cache/orca-poteto/model-ranking.md` and fetched again when the available models change or you ask for a refresh. Set `ranking_source` to `null`, or tell the run to use the defaults, to run every unit on the `implementation` entry. Reviewer models stay the same for the whole run.
+
 Explicit instructions for a run override individual fields without editing the file. The skill reads the config beside its own installed `SKILL.md`, not from the project being worked on.
 
 ## Install
@@ -39,4 +41,4 @@ ln -s "$PWD/skills/orca-poteto" ~/.grok/skills/orca-poteto
 
 Link `commit-style` the same way, for example `ln -s "$PWD/skills/commit-style" ~/.claude/skills/commit-style`.
 
-Use these commands only for destinations that do not already exist. If an agent has a copied installation, update the whole skill directory, including `SKILL.md`, `references/worker-contract.md`, and the sibling `models.yaml`. Preserve any local model choices, or link that config to the shared file. Start a fresh coordinator conversation to use the updated instructions without previously loaded poteto instructions.
+Use these commands only for destinations that do not already exist. If an agent has a copied installation, update the whole skill directory, including `SKILL.md`, everything under `references/`, and the sibling `models.yaml`. Preserve any local model choices, or link that config to the shared file. Start a fresh coordinator conversation to use the updated instructions without previously loaded poteto instructions.
