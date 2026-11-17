@@ -1,0 +1,9 @@
+{
+  "name": "ultrapowers",
+  "version": "1.0.0",
+  "description": "Code review with independent verification, Orca coordination, and atomic commits.",
+  "author": {
+    "name": "DerekNGAI"
+  },
+  "repository": "https://github.com/DerekNGAI/ultrapowers"
+}
