@@ -156,5 +156,18 @@ class PrepareReviewTests(unittest.TestCase):
         self.assertIn("both a PR number and a commit", result.stderr)
         self.assertTrue(self.review("commit:123")["diff_range"].endswith(self.git("rev-parse", "HEAD")))
 
+    def test_path_with_dots_is_reviewed_as_a_path_not_a_range(self):
+        name = "notes..v2.txt"
+        (self.repo / name).write_text("one\n")
+        self.commit("dotted path")
+        (self.repo / name).write_text("two\n")
+        context = self.review(name)
+        self.assertEqual(context["scope"], name)
+        self.assertIn("+two", Path(context["diff_path"]).read_text())
+        result = subprocess.run([sys.executable, str(SCRIPT), "missing..nothing"], cwd=self.repo,
+                                capture_output=True, text=True)
+        self.assertNotEqual(result.returncode, 0)
+        self.assertIn("range of existing commits", result.stderr)
+
 if __name__ == "__main__":
     unittest.main()

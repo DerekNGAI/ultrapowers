@@ -65,11 +65,19 @@ def prepare(target):
     elif ".." in value and kind is None:
         separator = "..." if "..." in value else ".."
         parts = value.split(separator)
-        if len(parts) != 2 or not all(parts):
-            raise ValueError("Use a complete base..head or base...head range.")
-        base, head = (revision(part) for part in parts)
-        if separator == "...":
-            base = git("merge-base", base, head).decode().strip()
+        is_range = len(parts) == 2 and all(parts) and all(exists(part) for part in parts)
+        tracked = git("ls-files", "--with-tree=HEAD", "-z", "--", ":(literal)" + value)
+        if is_range and tracked:
+            raise ValueError("Target is both a tracked path and a range. Use path: for the path.")
+        if is_range:
+            base, head = (revision(part) for part in parts)
+            if separator == "...":
+                base = git("merge-base", base, head).decode().strip()
+        elif tracked:
+            scope, literal = scoped_path(value)
+            pathspec = [literal]
+        else:
+            raise ValueError("Use a complete base..head or base...head range of existing commits.")
     else:
         ref = branch_ref(value) if kind != "commit" else None
         tracked = git("ls-files", "--with-tree=HEAD", "-z", "--", ":(literal)" + value)
