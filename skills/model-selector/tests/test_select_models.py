@@ -142,6 +142,7 @@ class SelectorTests(unittest.TestCase):
             lambda c: c["orca-poteto"]["roles"].update(review=[]),
             lambda c: c["code-turtle"]["roles"]["finder"].update(model=""),
             lambda c: c["orca-poteto"].update(review_budget=True),
+            lambda c: c["code-turtle"].update(review_budget=2),
             lambda c: c["orca-poteto"].update(ranking_source="file:///private"),
             lambda c: c["orca-poteto"]["roles"]["implementation"].update(agent=None),
         ):
@@ -160,7 +161,7 @@ class SelectorTests(unittest.TestCase):
 
     def test_invalid_overrides_cannot_turn_errors_into_inheritance(self):
         for override in ({"roles": {"unknown": {}}}, {"roles": {"finder": {"model": ""}}},
-                         {"roles": {"verifier": {"runtime": "codex"}}}, {"review_budget": False}):
+                         {"roles": {"verifier": {"runtime": "codex"}}}, {"review_budget": False}, [], False):
             with self.subTest(override=override), self.assertRaises(selector.SelectionError):
                 selector.select(self.config, "code-turtle", self.host, override)
 

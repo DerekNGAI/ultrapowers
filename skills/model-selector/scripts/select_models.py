@@ -60,10 +60,8 @@ def validate_entry(entry, where, *, partial=False, inherit_agent=True):
             f"{where}.agent: must select a runtime")
 
 
-def load_config(path=None):
-    path = Path(path) if path else Path(__file__).resolve().parents[1] / "models.json"
-    config = read_json(path)
-    keys(config, set(PROFILES), str(path))
+def validate_config(config, where="config"):
+    keys(config, set(PROFILES), where)
     for profile, roles in PROFILES.items():
         value = config[profile]
         keys(value, {"roles", "review_budget", "ranking_source"}, profile)
@@ -71,6 +69,8 @@ def load_config(path=None):
         budget = value["review_budget"]
         require(budget is None or (type(budget) is int and budget > 0),
                 f"{profile}.review_budget: expected positive integer or null")
+        require(profile != "code-turtle" or budget is None,
+                "code-turtle.review_budget must be null; every valid claim needs a verifier")
         source = value["ranking_source"]
         require(source is None or (text(source) and urlparse(source).scheme in {"http", "https"}
                                    and bool(urlparse(source).netloc)),
@@ -83,6 +83,11 @@ def load_config(path=None):
             for entry in entries:
                 validate_entry(entry, f"{profile}.{role}", inherit_agent=profile != "orca-poteto")
     return config
+
+
+def load_config(path=None):
+    path = Path(path) if path else Path(__file__).resolve().parents[1] / "models.json"
+    return validate_config(read_json(path), str(path))
 
 
 def validate_host(host):
@@ -195,7 +200,8 @@ def select(config, profile, host, overrides=None):
     require(profile in PROFILES, f"unknown profile: {profile}")
     validate_host(host)
     policy = config[profile]
-    overrides = overrides or {}
+    if overrides is None:
+        overrides = {}
     require(isinstance(overrides, dict) and set(overrides) <= {"roles", "review_budget", "ranking_source"},
             "unknown override fields")
     role_overrides = overrides.get("roles", {})
@@ -213,23 +219,14 @@ def select(config, profile, host, overrides=None):
     for field in ("review_budget", "ranking_source"):
         if field in overrides:
             merged[field] = overrides[field]
-    validation = dict(config, **{profile: merged})
-    # Use the same validation for defaults and merged overrides.
-    validate_config = json.dumps(validation)
-    validate_config = json.loads(validate_config)
-    budget = merged["review_budget"]
-    require(budget is None or (type(budget) is int and budget > 0), "invalid review_budget override")
-    source = merged["ranking_source"]
-    require(source is None or (text(source) and urlparse(source).scheme in {"http", "https"}
-                               and bool(urlparse(source).netloc)), "invalid ranking_source override")
+    validate_config({**config, profile: merged})
     resolved = {}
     for role, value in merged["roles"].items():
         entries = value if role == "review" else [value]
-        for entry in entries:
-            validate_entry(entry, role, inherit_agent=profile != "orca-poteto")
         choices = [resolve(entry, host) for entry in entries]
         resolved[role] = choices if role == "review" else choices[0]
-    return {"profile": profile, "roles": resolved, "review_budget": budget, "ranking_source": source}
+    return {"profile": profile, "roles": resolved, "review_budget": merged["review_budget"],
+            "ranking_source": merged["ranking_source"]}
 
 
 def main():
