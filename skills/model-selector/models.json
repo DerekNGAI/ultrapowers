@@ -1,0 +1,41 @@
+{
+  "orca-poteto": {
+    "roles": {
+      "implementation": {
+        "agent": "codex",
+        "model": "gpt-6.1-sol",
+        "effort": "high"
+      },
+      "review": [
+        {
+          "agent": "codex",
+          "model": "gpt-6.1-terra",
+          "effort": "max"
+        }
+      ]
+    },
+    "review_budget": 2,
+    "ranking_source": "https://artificialanalysis.ai/leaderboards/models"
+  },
+  "code-turtle": {
+    "roles": {
+      "summarizer": {
+        "agent": null,
+        "model": "haiku",
+        "effort": null
+      },
+      "finder": {
+        "agent": null,
+        "model": null,
+        "effort": null
+      },
+      "verifier": {
+        "agent": null,
+        "model": null,
+        "effort": null
+      }
+    },
+    "review_budget": null,
+    "ranking_source": null
+  }
+}

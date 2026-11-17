@@ -1,16 +1,16 @@
 # Model proposal
 
-Propose one implementation entry per unit, drawn from the models the execution host can launch and a current public ranking. The proposal is a suggestion: the user approves or edits it in the Propose and ask message before any dispatch.
+Propose role choices drawn from verified host capabilities and a current public ranking. For Orca, propose one implementation entry per unit. For code-turtle, preserve profile choices unless the user requests ranking or supplies overrides. The user approves unsettled choices before dispatch.
 
 ## 1. Candidates
 
-A **candidate** is an agent, model, and effort the execution host can launch. List them from each agent Orca offers on that host: its model catalog and the efforts each model supports, read from Orca's launch preferences and the agent's own CLI. Record each model's exact launch ID. The file's `implementation` entry is always a candidate and is the **default**.
+A **candidate** is an agent, model, and effort the selected launch adapter can honor. Discover each permitted runtime's catalog and supported efforts using the host contract. Filter by adapter capabilities before ranking. Record exact launch IDs. The profile's role entry is the **default** only when verified available. An unavailable default stops selection.
 
-Done when every agent's catalog is listed or reported unreadable.
+Done when every permitted runtime's catalog is listed or reported unreadable and adapter limits are applied.
 
 ## 2. Ranking
 
-The **ranking** is a table with one row per candidate: the source's name for that model and effort, its capability, cost, and speed scores, and the retrieval date. Keep it with its source URL at `${XDG_CACHE_HOME:-$HOME/.cache}/orca-poteto/model-ranking.md` on the coordinator's host.
+The **ranking** is a table with one row per candidate: the source's name for that model and effort, its capability, cost, and speed scores, and the retrieval date. Keep it with its source URL at `${XDG_CACHE_HOME:-$HOME/.cache}/model-selector/model-ranking.md` on the execution host.
 
 Reuse the saved ranking when it comes from the current `ranking_source` and has a row for every candidate. Fetch `ranking_source` again when a candidate has no row, the URL changed, or the user asks for a refresh, then save the result.
 
