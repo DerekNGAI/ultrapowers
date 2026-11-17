@@ -217,6 +217,17 @@ print(json.dumps({'type':'result','is_error':False,'modelUsage':{model:{}},'perm
         self.assertFalse(record["complete"])
         self.assertIsNone(record["effective"])
 
+    def test_timeout_is_configurable_and_records_an_incomplete_role(self):
+        self.assertGreater(adapter.DEFAULT_TIMEOUT, 600)
+        self.fake.write_text('#!/bin/sh\nsleep 5\n')
+        with self.assertRaisesRegex(ValueError, "timed out"):
+            adapter.run(self.policy_path, self.context_path, "bug-hunter", executable=str(self.fake), timeout=1)
+        record = json.loads(next(self.artifacts.glob("bug-hunter-*/selection.json")).read_text())
+        self.assertEqual(record["timeout"], 1)
+        self.assertFalse(record["complete"])
+        with self.assertRaises(ValueError):
+            adapter.run(self.policy_path, self.context_path, "bug-hunter", executable=str(self.fake), timeout=0)
+
     def test_native_audit_uses_actual_role_requests_and_responses(self):
         directory = self.runtime_fixture()
         self.request["messages"] = [{"role": "user", "content": self.context["diff_path"]}]

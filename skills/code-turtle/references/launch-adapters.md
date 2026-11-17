@@ -31,7 +31,7 @@ python3 /resolved/skills/code-turtle/scripts/claude_review.py run bug-hunter \
   --policy /artifact/model-selection.json --context /artifact/context.json
 ```
 
-Roles are `summarizer`, `bug-hunter`, `security`, and `verifier`. For a verifier, create a separate JSON file with exactly `file`, `line`, and `claim` and pass `--claim /artifact/one-claim.json`. The adapter rejects extra candidate fields. It supplies only those three fields and neutral pointers. It never passes the policy, summary, finder output, or previous session to the child.
+Roles are `summarizer`, `bug-hunter`, `security`, and `verifier`. Each role stops after 1800 seconds; pass `--timeout SECONDS` to change that for a large diff. For a verifier, create a separate JSON file with exactly `file`, `line`, and `claim` and pass `--claim /artifact/one-claim.json`. The adapter rejects extra candidate fields. It supplies only those three fields and neutral pointers. It never passes the policy, summary, finder output, or previous session to the child.
 
 The adapter loads the original role body into a session-only `--agents` definition and selects it with `--agent`. It pins the approved exact ID with `--model` and applies `--effort` when resolved. CLI inheritance pins verified parent settings while retaining inherited markers in `selection.json`. Each role is a fresh process with no resume, a separate artifact directory, only `Read, Grep, Glob`, no MCP servers, and no slash commands. The role cannot invoke code-turtle recursively or dispatch children. The adapter leaves installed files and settings unchanged.
 

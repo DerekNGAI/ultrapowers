@@ -16,6 +16,7 @@ ROLES = {"summarizer": "summarizer", "bug-hunter": "finder", "security": "finder
 POINTERS = {"diff_path", "before_root", "after_root", "repo_root", "schema_path", "diff_range", "scope", "mode",
             "binary_files", "unavailable_submodules"}
 TOOLS = {"Read", "Grep", "Glob"}
+DEFAULT_TIMEOUT = 1800
 
 
 def shared_selector():
@@ -154,7 +155,9 @@ def audit(policy_path, context_path, role, trace):
     return directory
 
 
-def run(policy_path, context_path, role, claim_path=None, *, executable="claude"):
+def run(policy_path, context_path, role, claim_path=None, *, executable="claude", timeout=DEFAULT_TIMEOUT):
+    if type(timeout) is not int or timeout < 1:
+        raise ValueError("timeout must be a positive number of seconds")
     selector = shared_selector()
     policy = selector.read_json(policy_path)
     if policy.get("profile") != "code-turtle":
@@ -190,11 +193,12 @@ def run(policy_path, context_path, role, claim_path=None, *, executable="claude"
     env = os.environ.copy()
     env["OTEL_LOG_RAW_API_BODIES"] = "file:" + str(directory / "requests")
     evidence = {"requested": choice["requested"], "resolved": choice["resolved"], "inherited": choice["inherited"],
-                "adapter": "claude-cli", "command": arguments, "effective": None, "complete": False}
+                "adapter": "claude-cli", "command": arguments, "timeout": timeout, "effective": None,
+                "complete": False}
     try:
         with (directory / "runtime.jsonl").open("w") as stdout, (directory / "stderr.log").open("w") as stderr:
             process = subprocess.run(arguments, cwd=directory, env=env, input=json.dumps(content), text=True,
-                                     stdout=stdout, stderr=stderr, timeout=600)
+                                     stdout=stdout, stderr=stderr, timeout=timeout)
         if process.returncode:
             raise ValueError(f"Claude CLI exited {process.returncode}; see {directory / 'stderr.log'}")
         evidence["effective"], result = verify_runtime(directory, choice)
@@ -218,12 +222,14 @@ def main():
         command.add_argument("--context", required=True, type=Path)
         if name == "run":
             command.add_argument("--claim", type=Path)
+            command.add_argument("--timeout", type=int, default=DEFAULT_TIMEOUT,
+                                 help=f"seconds before the role is stopped (default {DEFAULT_TIMEOUT})")
         else:
             command.add_argument("--trace", required=True, type=Path)
     args = parser.parse_args()
     try:
         if args.command == "run":
-            print(run(args.policy, args.context, args.role, args.claim))
+            print(run(args.policy, args.context, args.role, args.claim, timeout=args.timeout))
         else:
             print(audit(args.policy, args.context, args.role, args.trace))
     except (ValueError, OSError, KeyError) as exc:
