@@ -64,6 +64,14 @@ class SelectorTests(unittest.TestCase):
         self.assertEqual(selected["launch"], {"model": "provider/b", "effort": "high"})
         self.assertEqual(selected["inherited"], ["agent"])
 
+    def test_summarizer_can_explicitly_inherit_instead_of_haiku(self):
+        result = selector.select(self.config, "code-turtle", self.host,
+                                 {"roles": {"summarizer": {"model": None}}})
+        selected = result["roles"]["summarizer"]
+        self.assertEqual(selected["launch"], {"model": None, "effort": None})
+        self.assertEqual(selected["resolved"], {"agent": "claude", "model": "provider/a", "effort": "max"})
+        self.assertEqual(selected["inherited"], ["agent", "effort", "model"])
+
     def test_field_overrides_do_not_change_other_defaults_or_config(self):
         before = copy.deepcopy(self.config)
         result = selector.select(self.config, "orca-poteto", self.host,
