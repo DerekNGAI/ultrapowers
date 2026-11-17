@@ -133,5 +133,41 @@ class PrepareReviewTests(unittest.TestCase):
         self.assertFalse((self.repo / "INJECTED").exists())
 
 
+    def test_unchanged_submodule_keeps_small_mode_and_changed_submodule_is_a_limit(self):
+        head = self.git("rev-parse", "HEAD")
+        self.git("update-index", "--add", "--cacheinfo", f"160000,{head},vendor")
+        self.git("commit", "-m", "add submodule")
+        (self.repo / "example.txt").write_text("after\n")
+        self.git("commit", "-m", "small change", "--", "example.txt")
+        unchanged = self.git("rev-parse", "HEAD")
+        context = self.review(unchanged)
+        self.assertEqual(context["unavailable_submodules"], [])
+        self.assertEqual(context["mode"], "small")
+        self.git("update-index", "--cacheinfo", f"160000,{unchanged},vendor")
+        self.git("commit", "-m", "bump submodule")
+        context = self.review(self.git("rev-parse", "HEAD"))
+        self.assertEqual(context["unavailable_submodules"], ["vendor"])
+        self.assertEqual(context["mode"], "full")
+
+    def test_numeric_ref_requires_explicit_pr_or_commit_target(self):
+        self.git("branch", "123")
+        result = subprocess.run([sys.executable, str(SCRIPT), "123"], cwd=self.repo, capture_output=True, text=True)
+        self.assertNotEqual(result.returncode, 0)
+        self.assertIn("both a PR number and a commit", result.stderr)
+        self.assertTrue(self.review("commit:123")["diff_range"].endswith(self.git("rev-parse", "HEAD")))
+
+    def test_path_with_dots_is_reviewed_as_a_path_not_a_range(self):
+        name = "notes..v2.txt"
+        (self.repo / name).write_text("one\n")
+        self.commit("dotted path")
+        (self.repo / name).write_text("two\n")
+        context = self.review(name)
+        self.assertEqual(context["scope"], name)
+        self.assertIn("+two", Path(context["diff_path"]).read_text())
+        result = subprocess.run([sys.executable, str(SCRIPT), "missing..nothing"], cwd=self.repo,
+                                capture_output=True, text=True)
+        self.assertNotEqual(result.returncode, 0)
+        self.assertIn("range of existing commits", result.stderr)
+
 if __name__ == "__main__":
     unittest.main()

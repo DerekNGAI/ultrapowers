@@ -105,7 +105,7 @@ In a repository you want to review, run one of these commands:
 /ultrapowers:code-turtle path:src/parser.py
 ```
 
-With no target, the skill reviews tracked staged and unstaged changes against `HEAD`. A path restricts those changes. Untracked files are excluded. Use `path:`, `branch:`, or `commit:` when a name is ambiguous. Branch review uses the merge base with `origin/HEAD`, `main`, or `master`; use an explicit range for another base. Commit review compares the commit with its first parent. PR review uses the merge base of the PR's base and head objects. The skill never fetches or checks out a ref.
+With no target, the skill reviews tracked staged and unstaged changes against `HEAD`. A path restricts those changes. Untracked files are excluded. Use `#N` for a PR, or `path:`, `branch:`, or `commit:`, when a name is ambiguous. Branch review uses the merge base with `origin/HEAD`, `main`, or `master`; use an explicit range for another base. Commit review compares the commit with its first parent. PR review uses the merge base of the PR's base and head objects. The skill never fetches or checks out a ref.
 
 The review saves its diff and source snapshots outside the repository and passes file pointers to each agent. It resolves the approved role models before dispatch. Below 50 changed lines, one finder checks correctness and security, then independent verifiers check its claims. Larger diffs run a summarizer, a bug hunter, and a security finder in parallel before verification. The summarizer defaults to Haiku. Binary changes and unavailable submodule content select the full path and appear as coverage limits.
 
