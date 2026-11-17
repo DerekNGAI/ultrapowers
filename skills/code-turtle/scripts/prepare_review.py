@@ -95,9 +95,11 @@ def prepare(target):
     stats = git(*diff_args, *flags, "--numstat", "-z", "--", *pathspec)
     changed_lines = 0
     binary_files = []
+    changed_paths = set()
     for record in stats.split(b"\0"):
         if record:
             added, deleted, name = record.split(b"\t", 2)
+            changed_paths.add(os.fsdecode(name))
             if added == b"-":
                 binary_files.append(os.fsdecode(name))
             else:
@@ -156,6 +158,7 @@ def prepare(target):
             elif source.is_dir():
                 unavailable.add(os.fsdecode(name))
 
+    unavailable &= changed_paths
     (artifacts / "diff.patch").write_bytes(diff)
     context = {
         "repo_root": str(repo), "target": target or "tracked working copy", "scope": scope,
