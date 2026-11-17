@@ -28,7 +28,7 @@ The wrapper leaves both underlying skills and their standalone settings unchange
 
 ## Configure agents and models
 
-Edit [`skills/model-selector/models.json`](skills/model-selector/models.json). This is the only model config. Each role entry has `agent`, `model`, and `effort`. Use complete model names, full IDs, or verified runtime aliases. JSON `null` inherits the selected runtime's default. Missing fields, duplicate keys, unknown fields, and empty values stop selection.
+Edit [`skills/model-selector/models.json`](skills/model-selector/models.json). This is the only model config. Each role entry has `agent`, `model`, and `effort`. Use complete model names, full IDs, or verified runtime aliases. JSON `null` inherits the corresponding runtime or model default: an inherited model keeps the session effort, while an explicit model with null effort uses that model's default. Missing fields, duplicate keys, unknown fields, and empty values stop selection.
 
 The selector resolves names against the selected runtime's available models and verified launch adapters. It prefers the configured provider when unambiguous and asks for a full ID when it cannot select one match. The `agent` field fixes the runtime; model providers do not change it. An unsupported runtime, model, or effort stops dispatch. Each saved policy records requested, resolved, inherited, and effective choices. Requested flags alone do not prove the effective choice.
 
