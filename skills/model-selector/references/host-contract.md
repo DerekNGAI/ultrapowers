@@ -10,12 +10,12 @@ The caller discovers capabilities. The selector consumes verified facts, without
 | `default_effort` | Verified runtime or parent session effort, or `null` for an inherited provider default. |
 | `provider` | Unambiguous configured provider prefix before the last slash, or `null`. |
 | `models` | Catalog entries with exactly `id`, `name`, `aliases`, `efforts`, `default_effort`. |
-| `adapters` | Ordered launch routes with exactly `id`, `models`, `effort`, `evidence`. |
+| `adapters` | Ordered launch routes with exactly `id`, `models`, `efforts`, `evidence`. |
 | `evidence` | Nonempty pointer to CLI/catalog/session discovery evidence. |
 
 Each catalog entry has an exact launch `id` and complete `name`. `aliases` contains only verified runtime aliases, never guessed nicknames. `efforts` lists supported effort names. A `default_effort` is a supported value or `null` for inherited provider behavior. A null effort stays visibly inherited and must not be reported as a verified numeric level.
 
-Each adapter's `models` lists accepted modes, `id`, `alias`, or `inherit`. `effort` is a boolean indicating explicit effort support. `evidence` points to verified launch flags or the actual native tool schema. Adapter IDs are:
+Each adapter's `models` lists accepted modes, `id`, `alias`, or `inherit`. `efforts` lists the exact effort names that route can apply; an empty list permits only inherited effort. A choice must be supported by both the model and adapter. Include only catalog IDs and aliases that each advertised mode can launch. `evidence` points to verified launch flags or the actual native tool schema. Adapter IDs are:
 
 | Adapter | Caller responsibility |
 | --- | --- |

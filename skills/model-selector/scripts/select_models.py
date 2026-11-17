@@ -122,14 +122,16 @@ def validate_host(host):
         require(isinstance(info["adapters"], list) and info["adapters"], f"{agent}: no launch adapter")
         adapter_ids = set()
         for adapter in info["adapters"]:
-            keys(adapter, {"id", "models", "effort", "evidence"}, f"{agent}.adapter")
+            keys(adapter, {"id", "models", "efforts", "evidence"}, f"{agent}.adapter")
             require(adapter["id"] in ADAPTERS and adapter["id"] not in adapter_ids,
                     f"{agent}: unknown/duplicate adapter")
             adapter_ids.add(adapter["id"])
             modes = adapter["models"]
             require(isinstance(modes, list) and modes and set(modes) <= {"id", "alias", "inherit"},
                     f"{agent}: invalid adapter model modes")
-            require(type(adapter["effort"]) is bool and text(adapter["evidence"]),
+            levels = adapter["efforts"]
+            require(isinstance(levels, list) and all(text(level) for level in levels)
+                    and len(set(levels)) == len(levels) and text(adapter["evidence"]),
                     f"{agent}: unverified launch adapter")
             if adapter["id"].startswith("claude-"):
                 require(agent == "claude", "Claude adapter cannot switch runtimes")
@@ -172,17 +174,19 @@ def resolve(entry, host):
             if "id" not in adapter["models"]:
                 continue
             launch_mode = "id"
-        if effort is not None and not adapter["effort"]:
+        if effort is not None and effort not in adapter["efforts"]:
             continue
         if adapter["id"] == "claude-agent" and mode == "alias" and name not in {"haiku", "sonnet", "opus", "fable"}:
             continue
         launch_model = None if launch_mode == "inherit" else name if launch_mode == "alias" else model["id"]
         if effort is not None and launch_model is None and adapter["id"] == "orca":
+            if "id" not in adapter["models"]:
+                continue
             launch_model = model["id"]
         launch_effort = effort
         if adapter["id"] == "claude-cli":
-            require(resolved_effort is not None or effort is None,
-                    "Claude CLI cannot pin unverified effort")
+            if resolved_effort is not None and resolved_effort not in adapter["efforts"]:
+                continue
             launch_effort = resolved_effort
         return {
             "requested": entry.copy(),

@@ -24,12 +24,12 @@ def host():
         "claude": {"default_model": "provider/a", "default_effort": "max", "provider": "provider",
                    "models": models, "evidence": "verified session and catalog",
                    "adapters": [
-                       {"id": "claude-agent", "models": ["alias", "inherit"], "effort": True, "evidence": "Agent schema"},
-                       {"id": "claude-cli", "models": ["id"], "effort": True, "evidence": "CLI probe"},
+                       {"id": "claude-agent", "models": ["alias", "inherit"], "efforts": ["low", "high", "max"], "evidence": "Agent schema"},
+                       {"id": "claude-cli", "models": ["id"], "efforts": ["low", "high", "max"], "evidence": "CLI probe"},
                    ]},
         "codex": {"default_model": "provider/gpt-6.1-sol", "default_effort": "high", "provider": "provider",
                   "models": models, "evidence": "CLI catalog",
-                  "adapters": [{"id": "orca", "models": ["id", "inherit"], "effort": True, "evidence": "Orca launch receipt"}]},
+                  "adapters": [{"id": "orca", "models": ["id", "inherit"], "efforts": ["high", "max"], "evidence": "Orca launch receipt"}]},
     }}
 
 
@@ -108,9 +108,23 @@ class SelectorTests(unittest.TestCase):
         info["adapters"] = info["adapters"][:1]
         with self.assertRaises(selector.SelectionError):
             selector.resolve(choice("provider/a"), self.host)
-        info["adapters"][0]["effort"] = False
+        info["adapters"][0]["efforts"] = []
         with self.assertRaises(selector.SelectionError):
             selector.resolve(choice("opus", "max"), self.host)
+
+    def test_model_effort_must_also_be_supported_by_adapter(self):
+        info = self.host["agents"]["claude"]
+        info["models"][0]["efforts"].append("ultra")
+        with self.assertRaises(selector.SelectionError):
+            selector.resolve(choice("provider/a", "ultra"), self.host)
+        info["adapters"].pop(0)
+        info["adapters"][0]["efforts"] = ["high"]
+        with self.assertRaises(selector.SelectionError):
+            selector.resolve(choice(), self.host)
+        info = self.host["agents"]["codex"]
+        info["adapters"][0]["models"] = ["inherit"]
+        with self.assertRaises(selector.SelectionError):
+            selector.resolve(choice(effort="max", agent="codex"), self.host)
 
     def test_cli_pins_parent_inheritance_without_claiming_override(self):
         self.host["agents"]["claude"]["adapters"].pop(0)
@@ -126,6 +140,8 @@ class SelectorTests(unittest.TestCase):
             lambda h: h["agents"]["claude"].update(default_model="missing"),
             lambda h: h["agents"]["claude"]["adapters"][0].update(models=["id"]),
             lambda h: h["agents"]["codex"]["adapters"][0].update(id="claude-cli", models=["id"]),
+            lambda h: h["agents"]["claude"]["adapters"][0].update(efforts=True),
+            lambda h: h["agents"]["claude"]["adapters"][0].update(efforts=["high", "high"]),
         ):
             value = host()
             mutate(value)
