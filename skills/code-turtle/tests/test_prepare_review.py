@@ -149,5 +149,12 @@ class PrepareReviewTests(unittest.TestCase):
         self.assertEqual(context["unavailable_submodules"], ["vendor"])
         self.assertEqual(context["mode"], "full")
 
+    def test_numeric_ref_requires_explicit_pr_or_commit_target(self):
+        self.git("branch", "123")
+        result = subprocess.run([sys.executable, str(SCRIPT), "123"], cwd=self.repo, capture_output=True, text=True)
+        self.assertNotEqual(result.returncode, 0)
+        self.assertIn("both a PR number and a commit", result.stderr)
+        self.assertTrue(self.review("commit:123")["diff_range"].endswith(self.git("rev-parse", "HEAD")))
+
 if __name__ == "__main__":
     unittest.main()

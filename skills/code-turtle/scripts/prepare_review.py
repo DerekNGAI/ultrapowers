@@ -55,6 +55,8 @@ def prepare(target):
         scope, literal = scoped_path(value)
         pathspec = [literal]
     elif re.fullmatch(r"#?[0-9]+", value) and kind is None:
+        if not value.startswith("#") and exists(value):
+            raise ValueError("Target is both a PR number and a commit. Use #N for the PR or commit: for the commit.")
         pr = json.loads(run("gh", "pr", "view", value.lstrip("#"), "--json", "baseRefOid,headRefOid", cwd=repo))
         if not all(exists(pr[key]) for key in ("baseRefOid", "headRefOid")):
             raise ValueError("PR objects are missing locally. Fetch the PR base and head, then retry; no fetch was performed.")
