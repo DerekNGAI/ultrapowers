@@ -43,7 +43,7 @@ If a review is still prescribed after the budget is spent, run that check yourse
 
 Use the brief's resolved `MODEL_POLICY` for your role and every helper. It includes the implementation entry and every review entry, and overrides pstack's model choices and automatic effort adjustments for this run.
 
-Use the resolved choices instead of loading another copy of `models.yaml` or resolving model names again. If a selection becomes unavailable or unverifiable, stop that unit and report the problem through the coordinator. Never silently substitute an agent, model, or effort.
+Use the resolved choices instead of loading another copy of the shared selector config or resolving model names again. If a selection becomes unavailable or unverifiable, stop that unit and report the problem through the coordinator. Never silently substitute an agent, model, or effort.
 
 ## Permissions
 
