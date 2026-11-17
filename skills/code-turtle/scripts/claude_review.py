@@ -6,6 +6,7 @@ import json
 import os
 from pathlib import Path
 import runpy
+import shutil
 import subprocess
 import tempfile
 from types import SimpleNamespace
@@ -53,7 +54,10 @@ def definition(role, model):
     if tools != TOOLS:
         raise ValueError(f"{path}: expected the read-only turtle tool set")
     name = f"turtle-{role}"
-    return {name: {"description": fields["description"].strip(), "prompt": body.strip(),
+    prompt = (body.strip() + "\n\nRead only the supplied diff_path and schema_path files and source under "
+              "before_root, after_root, or repo_root. Set Grep and Glob paths to those source roots. "
+              "Never search their parent directories or other review artifacts.")
+    return {name: {"description": fields["description"].strip(), "prompt": prompt,
                    "tools": sorted(tools), "model": model}}
 
 
@@ -83,6 +87,10 @@ def verify_runtime(directory, choice):
     init = next((event for event in events if event.get("subtype") == "init"), None)
     if init is None or set(init.get("tools", [])) != TOOLS or init.get("mcp_servers") != []:
         raise ValueError("runtime did not preserve read-only tools and empty MCP configuration")
+    content = json.loads((directory / "input.json").read_text())
+    allowed = {str(Path(content[key]).resolve()) for key in ("repo_root", "before_root", "after_root")}
+    if init.get("cwd") != str(directory.resolve()) or set(init.get("additional_directories", [])) != allowed:
+        raise ValueError("runtime directory access differs from the isolated role scope")
     results = [event for event in events if event.get("type") == "result"]
     if not results or results[-1].get("is_error") or results[-1].get("permission_denials"):
         raise ValueError("role failed or a required tool was denied")
@@ -160,7 +168,14 @@ def run(policy_path, context_path, role, claim_path=None, *, executable="claude"
     content = payload(context, role, selector.read_json(claim_path) if claim_path else None)
     root = Path(context["diff_path"]).resolve().parent
     repo = Path(context["repo_root"]).resolve()
+    allowed = [repo, Path(content["before_root"]).resolve(), Path(content["after_root"]).resolve()]
+    if any(root.is_relative_to(path) for path in allowed):
+        raise ValueError("role source access would expose the shared review artifacts")
     directory = artifact_directory(context, f"{role}-")
+    for key, name in (("diff_path", "diff.patch"), ("schema_path", "finding-schema.md")):
+        target = directory / name
+        shutil.copyfile(content[key], target)
+        content[key] = str(target)
     (directory / "input.json").write_text(json.dumps(content, indent=2) + "\n")
     defs = definition(role, choice["resolved"]["model"])
     (directory / "agents.json").write_text(json.dumps(defs, indent=2) + "\n")
@@ -168,7 +183,8 @@ def run(policy_path, context_path, role, claim_path=None, *, executable="claude"
                  "--agents", str(directory / "agents.json"), "--agent", f"turtle-{role}",
                  "--model", choice["launch"]["model"], "--tools", "Read,Grep,Glob",
                  "--allowedTools", "Read,Grep,Glob", "--strict-mcp-config", "--disable-slash-commands",
-                 "--permission-mode", "dontAsk", "--add-dir", str(root), str(repo), str(Path(context["schema_path"]).parent)]
+                 "--settings", json.dumps({"permissions": {"blockReadsOutsideWorkingDirectories": True}}),
+                 "--permission-mode", "dontAsk", "--add-dir", *(str(path) for path in allowed)]
     if choice["launch"]["effort"] is not None:
         arguments += ["--effort", choice["launch"]["effort"]]
     env = os.environ.copy()

@@ -29,6 +29,10 @@ class ClaudeAdapterTests(unittest.TestCase):
                         "summary": "must not enter child context", "candidate_arrays": ["another claim"]}
         self.context_path = self.artifacts / "context.json"
         self.context_path.write_text(json.dumps(self.context))
+        Path(self.context["diff_path"]).write_text("neutral diff\n")
+        Path(self.context["schema_path"]).write_text("neutral schema\n")
+        Path(self.context["before_root"]).mkdir()
+        Path(self.context["after_root"]).mkdir()
         self.choice = {"requested": {"agent": None, "model": "provider/selected", "effort": "high"},
                        "resolved": {"agent": "claude", "model": "provider/selected", "effort": "high"},
                        "inherited": ["agent"], "adapter": "claude-cli",
@@ -43,7 +47,11 @@ from pathlib import Path
 import sys
 args = sys.argv
 model = args[args.index('--model') + 1]
-effort = args[args.index('--effort') + 1]
+effort = args[args.index('--effort') + 1] if '--effort' in args else 'high'
+assert json.loads(args[args.index('--settings') + 1])['permissions']['blockReadsOutsideWorkingDirectories'] is True
+start = args.index('--add-dir') + 1
+end = next((i for i in range(start, len(args)) if args[i].startswith('--')), len(args))
+allowed = args[start:end]
 definition = json.loads(Path(args[args.index('--agents') + 1]).read_text())
 name = args[args.index('--agent') + 1]
 assert definition[name]['tools'] == ['Glob','Grep','Read']
@@ -61,7 +69,7 @@ requests.mkdir()
 (requests / 'index.jsonl').write_text(json.dumps({'session_id':'child-session',
     'request_file':'turn.request.json','response_file':'turn.response.json'}))
 print(json.dumps({'type':'system','subtype':'init','session_id':'child-session','model':model,
-    'tools':['Read','Grep','Glob'],'mcp_servers':[]}))
+    'tools':['Read','Grep','Glob'],'mcp_servers':[], 'cwd':str(Path.cwd()),'additional_directories':allowed}))
 print(json.dumps({'type':'assistant','message':{'model':model}}))
 print(json.dumps({'type':'result','is_error':False,'modelUsage':{model:{}},'permission_denials':[],
     'result':'{"verdict":"rejected","evidence":"independent static counterexample"}'}))
@@ -76,11 +84,43 @@ print(json.dumps({'type':'result','is_error':False,'modelUsage':{model:{}},'perm
         received = json.loads((directory / "received.json").read_text())
         self.assertEqual(set(received), adapter.POINTERS | {"candidate"})
         self.assertEqual(received["candidate"], claim)
+        self.assertEqual(Path(received["diff_path"]).parent, directory)
+        self.assertEqual(Path(received["schema_path"]).parent, directory)
+        self.assertEqual(Path(received["diff_path"]).read_text(), "neutral diff\n")
+        self.assertEqual(Path(received["schema_path"]).read_text(), "neutral schema\n")
         evidence = json.loads((directory / "selection.json").read_text())
+        command = evidence["command"]
+        start = command.index("--add-dir") + 1
+        end = next((i for i in range(start, len(command)) if command[i].startswith("--")), len(command))
+        allowed = command[start:end]
+        self.assertEqual(set(allowed), {str(self.repo), self.context["before_root"], self.context["after_root"]})
+        self.assertNotIn(str(self.artifacts), allowed)
         self.assertTrue(evidence["complete"])
         self.assertEqual(evidence["effective"], self.choice["resolved"])
         self.assertEqual(evidence["inherited"], ["agent"])
         self.assertEqual(list(self.repo.iterdir()), [])
+
+    def test_inherited_effort_keeps_scope_and_observed_effort(self):
+        policy = json.loads(self.policy_path.read_text())
+        choice = policy["roles"]["finder"]
+        choice["requested"]["effort"] = choice["resolved"]["effort"] = choice["launch"]["effort"] = None
+        choice["inherited"].append("effort")
+        self.policy_path.write_text(json.dumps(policy))
+        directory = adapter.run(self.policy_path, self.context_path, "bug-hunter", executable=str(self.fake))
+        evidence = json.loads((directory / "selection.json").read_text())
+        self.assertTrue(evidence["complete"])
+        self.assertNotIn("--effort", evidence["command"])
+        self.assertEqual(evidence["effective"]["effort"], "high")
+        self.assertIn("effort", evidence["inherited"])
+
+    def test_source_scope_cannot_include_shared_artifacts(self):
+        for key in ("repo_root", "before_root", "after_root"):
+            context = copy.deepcopy(self.context)
+            context[key] = str(self.root)
+            self.context_path.write_text(json.dumps(context))
+            with self.subTest(key=key), self.assertRaises(ValueError):
+                adapter.run(self.policy_path, self.context_path, "bug-hunter", executable=str(self.fake))
+        self.assertEqual(list(self.artifacts.glob("bug-hunter-*")), [])
 
     def test_verifier_rejects_full_candidate_input(self):
         claim = {"file": "file.py", "line": 3, "claim": "One exact claim", "severity": "blocking"}
@@ -95,16 +135,19 @@ print(json.dumps({'type':'result','is_error':False,'modelUsage':{model:{}},'perm
         self.policy_path.write_text(json.dumps(policy))
         with self.assertRaises(ValueError):
             adapter.run(self.policy_path, self.context_path, "bug-hunter", executable=str(self.fake))
-        self.assertEqual(sorted(path.name for path in self.artifacts.iterdir()), ["context.json", "policy.json"])
+        self.assertEqual(sorted(path.name for path in self.artifacts.iterdir()),
+                         ["after", "before", "context.json", "diff.patch", "policy.json", "schema.md"])
 
     def runtime_fixture(self):
         directory = self.root / "runtime"
         directory.mkdir()
         requests = directory / "requests"
         requests.mkdir()
+        (directory / "input.json").write_text(json.dumps(self.context))
         self.events = [
             {"type": "system", "subtype": "init", "session_id": "child-session", "model": "provider/selected",
-             "tools": ["Read", "Grep", "Glob"], "mcp_servers": []},
+             "tools": ["Read", "Grep", "Glob"], "mcp_servers": [], "cwd": str(directory),
+             "additional_directories": [self.context[key] for key in ("repo_root", "before_root", "after_root")]},
             {"type": "assistant", "message": {"model": "provider/selected"}},
             {"type": "result", "is_error": False, "modelUsage": {"provider/selected": {}}, "permission_denials": [], "result": "[]"},
         ]
@@ -134,6 +177,9 @@ print(json.dumps({'type':'result','is_error':False,'modelUsage':{model:{}},'perm
             lambda events, request: events[0]["tools"].append("Bash"),
             lambda events, request: events[0].pop("mcp_servers"),
             lambda events, request: events[0].pop("session_id"),
+            lambda events, request: events[0].pop("additional_directories"),
+            lambda events, request: events[0]["additional_directories"].append(str(self.artifacts)),
+            lambda events, request: events[0].update(cwd=str(self.artifacts)),
             lambda events, request: events[-1]["permission_denials"].append({"tool_name": "Read"}),
             lambda events, request: request["output_config"].update(effort="max"),
             lambda events, request: request.update(model="provider/fallback"),

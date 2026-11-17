@@ -22,7 +22,7 @@ The audit checks the declared role's request source, exact model, effort, read-o
 
 ## Claude CLI
 
-Use this route when an exact full ID is selected or the native Agent tool cannot apply the selected effort. Verify installed `claude --help` has `--agents`, `--agent`, `--model`, `--effort`, `--tools`, and `--allowedTools`. Verify raw request logging support through `OTEL_LOG_RAW_API_BODIES=file:<directory>` and a live probe before offering this adapter. Tested on Claude Code 2.1.326.
+Use this route when an exact full ID is selected or the native Agent tool cannot apply the selected effort. Verify installed `claude --help` has `--agents`, `--agent`, `--model`, `--effort`, `--tools`, `--allowedTools`, and `--settings`. Require support for `permissions.blockReadsOutsideWorkingDirectories` and verify an outside read is denied. Verify raw request logging support through `OTEL_LOG_RAW_API_BODIES=file:<directory>` and a live probe before offering this adapter. Tested on Claude Code 2.1.326.
 
 Run the caller's adapter script, resolving its path through the real skill directory:
 
@@ -34,6 +34,8 @@ python3 /resolved/skills/code-turtle/scripts/claude_review.py run bug-hunter \
 Roles are `summarizer`, `bug-hunter`, `security`, and `verifier`. For a verifier, create a separate JSON file with exactly `file`, `line`, and `claim` and pass `--claim /artifact/one-claim.json`. The adapter rejects extra candidate fields. It supplies only those three fields and neutral pointers. It never passes the policy, summary, finder output, or previous session to the child.
 
 The adapter loads the original role body into a session-only `--agents` definition and selects it with `--agent`. It pins the approved exact ID with `--model` and applies `--effort` when resolved. CLI inheritance pins verified parent settings while retaining inherited markers in `selection.json`. Each role is a fresh process with no resume, a separate artifact directory, only `Read, Grep, Glob`, no MCP servers, and no slash commands. The role cannot invoke code-turtle recursively or dispatch children. The adapter leaves installed files and settings unchanged.
+
+Each role gets private copies of the diff and schema. Its working directories contain only its private directory, the checkout, and the before/after source snapshots. Session-only `--settings` sets `permissions.blockReadsOutsideWorkingDirectories` so file tools cannot read sibling roles, finder output, or the shared review artifacts. `--add-dir` alone does not enforce that boundary. Runtime evidence must show exactly the expected working directories. An inherited additional directory makes the review incomplete.
 
 The output directory contains `result.txt`, the clean `input.json`, runtime events, request traces, and `selection.json`. The script validates the result model, indexed request/response models for the child session, request effort, and tool set before accepting output. A mismatch, denied read, absent trace, timeout, or failed process leaves `complete: false` and exits with an error. Omit its findings and report the limitation. Raw requests contain review content and remain in the private artifact directory outside the checkout. Inspect `selection.json` for requested/effective choices; keep raw requests with the review evidence.
 
