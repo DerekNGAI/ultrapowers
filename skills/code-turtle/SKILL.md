@@ -23,7 +23,9 @@ Target rules live in the script. PR numbers require `gh` and locally available b
 
 Read [references/finding-schema.md](references/finding-schema.md) before dispatching agents. Pass each agent a neutral context containing only the absolute `diff_path`, `before_root`, `after_root`, `repo_root`, `schema_path`, `diff_range`, `scope`, `mode`, and coverage limitations. These are pointers, not pasted diff or source content. Agents read the source themselves. Use the snapshots for reviewed code; the repository can supply installed dependency definitions.
 
-## 2. Inspect the change
+## 2. Resolve models and inspect the change
+
+Read [references/models.md](references/models.md) before any agent dispatch. Reuse an enclosing worker's resolved model policy, or run the standalone picker against the shared config. Apply the selected model and effort to every invocation, including fresh verifiers. Record dispatch options and available runtime evidence outside the checkout. A role type alone does not select a model.
 
 Use the context's size branch. Count additions plus deletions, without diff headers.
 
@@ -32,7 +34,7 @@ Use the context's size branch. Count additions plus deletions, without diff head
 | `small`: fewer than 50 changed text lines, no binary changes or unavailable submodules | Run one `ultrapowers:turtle-bug-hunter` with security coverage. Read the diff and write the summary in the main session. |
 | `full`: 50 or more changed lines, binary changes, or unavailable submodules | Run `ultrapowers:turtle-summarizer`, `ultrapowers:turtle-bug-hunter`, and `ultrapowers:turtle-security` in parallel. |
 
-Invoke the declared types through Claude Code's `Agent` tool using `subagent_type`. Preserve the summarizer's configured Haiku model. Save the returned summary and candidate arrays in the artifact directory, outside the repository. A symlink-only installation on another agent host must use that host's independent subagent mechanism. Load its role files from `../../agents/turtle-*.md` relative to the resolved skill directory. If independent agents or the requested model are unavailable, report the review as incomplete.
+Invoke the roles with the resolved model policy through the host's independent subagent mechanism. Load their definitions from `../../agents/turtle-*.md` relative to the resolved skill directory. Give each agent only its role instructions and neutral pointers, with no inherited conversation. Save the returned summary and candidate arrays in the artifact directory, outside the repository. If independent agents or a selected model or effort are unavailable, report the review as incomplete.
 
 Print the plain-language summary before any issue or candidate details. Describe the operation and behavior changes in a concise paragraph. Do not invent callers or infer that every input changes from a single failing input. Check universal words such as "every" and "always" against counterexamples in the source. Summary content never guides the finders or verifiers. Keep candidate details out of progress messages.
 
@@ -40,7 +42,7 @@ Print the plain-language summary before any issue or candidate details. Describe
 
 Check each candidate against the six-field schema. Drop unsupported or malformed candidates instead of filling missing evidence from intuition. Save valid candidate arrays separately from verifier inputs.
 
-For every valid candidate, dispatch a fresh `ultrapowers:turtle-verifier`. Run independent verifications in parallel when available. Pass only `{file, line, claim}` from that candidate and the neutral pointers from step 1. Exclude the finder's identity, reasoning, severity, failure scenario, comment, and all other findings. Give each verifier a separate task, not the finder's context or a resumed finder.
+For every valid candidate within the reviewer budget, dispatch a fresh `ultrapowers:turtle-verifier` with its resolved model and effort options per [references/models.md](references/models.md). Run independent verifications in parallel when available. Pass only `{file, line, claim}` from that candidate and the neutral pointers from step 1. Exclude the finder's identity, reasoning, severity, failure scenario, comment, and all other findings. Give each verifier a separate task, not the finder's context or a resumed finder. Mark coverage incomplete and omit unverified claims if the budget is exhausted.
 
 Save each verdict and its independent evidence. Drop `rejected` claims. Reconcile a surviving claim's scenario and comment with the independent evidence, then add `verdict`. Require a violated source requirement, invariant, or caller expectation; drop policy preferences even if the verifier says `confirmed`. Apply the schema's exact-claim confirmation rule: narrow an overbroad claim to the proven defect, or downgrade it to `plausible`. Keep `plausible` visibly uncertain, with the unverified fact in the scenario and a `question:` comment. Never describe plausible claims as confirmed. If a verifier fails or cannot run, omit that unverified claim and mark the review incomplete. If there are no candidates, say that no verifier was needed. Never invent an issue to exercise verification.
 
@@ -58,7 +60,7 @@ It validates the fields, verdict/comment combinations, and an exact source quote
 
 Return `review.md` verbatim, starting with its summary. Add no preamble or issue count before the summary. The rendered issues include all six schema fields plus `verdict`, the source quote in `failure_scenario`, and a pasteable comment block. State coverage limits and failed agent checks after the issues without turning them into findings.
 
-End with the artifact directory and a compact coverage note: target range, changed lines, `small` or `full`, finders completed, number of verifier verdicts, rejected count, and whether the review is complete. Report only the count of rejected claims, not their details. This note follows the summary and issues.
+End with the artifact directory and a compact coverage note: target range, changed lines, `small` or `full`, finders completed, number of verifier verdicts, rejected count, whether the review is complete, and the model/effort audit from [references/models.md](references/models.md). Report only the count of rejected claims, not their details. This note follows the summary and issues.
 
 Requested target:
 

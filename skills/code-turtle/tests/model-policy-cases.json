@@ -1,0 +1,106 @@
+{
+  "purpose": "Behavioral replay for references/models.md. Catalog IDs are fictional supplied tool responses. Give an evaluator shared_inputs and each input without checks. Ask for launch options and coverage decisions; do not launch these fictional models.",
+  "shared_inputs": {
+    "host": "codex",
+    "tool": "spawn_agent",
+    "tool_options": ["agent_type", "message", "fork_turns", "model", "reasoning_effort"],
+    "catalog": [
+      {"agent": "codex", "model": "fixture-implementation", "efforts": ["high"]},
+      {"agent": "codex", "model": "fixture-review", "efforts": ["high", "max"]},
+      {"agent": "codex", "model": "fixture-other", "efforts": ["medium"]}
+    ],
+    "config": {
+      "implementation": {"agent": "codex", "model": "fixture-implementation", "effort": "high"},
+      "review": [{"agent": "codex", "model": "fixture-review", "effort": "max"}],
+      "review_budget": null,
+      "ranking_source": null
+    },
+    "review_pointers": {
+      "diff_path": "/tmp/replay/diff.patch",
+      "before_root": "/tmp/replay/before",
+      "after_root": "/tmp/replay/after",
+      "repo_root": "/tmp/replay/repo",
+      "schema_path": "/repo/skills/code-turtle/references/finding-schema.md",
+      "diff_range": "fixture-base..fixture-head",
+      "scope": [],
+      "coverage_limitations": []
+    },
+    "finder_result": {
+      "file": "access.py",
+      "line": 4,
+      "claim": "The access check grants access to a different user.",
+      "severity": "blocking",
+      "failure_scenario": "The module contract says only the owner may access a resource. For requester alice and owner bob, `return True` grants access, violating that contract.",
+      "comment": "issue (blocking): Restore the owner check."
+    },
+    "source_evidence": {"access.py": ["\"\"\"Only an owner may access a resource.\"\"\"", "", "def can_access(requester, owner):", "    return True"]}
+  },
+  "cases": [
+    {
+      "name": "standalone-small-defaults",
+      "input": {"request": "Review this small diff using defaults.", "mode": "small", "changed_lines": 2},
+      "checks": [
+        "Bug hunter and fresh verifier use fixture-review/max as tool options, with fork_turns none.",
+        "No summarizer or separate security launch; no question or ranking fetch.",
+        "Verifier prompt contains only role instructions, neutral pointers, and candidate file/line/claim; no severity/scenario/comment or finder transcript.",
+        "Record requested options; effective model is unverified when metadata is absent."
+      ]
+    },
+    {
+      "name": "standalone-full-defaults",
+      "input": {"request": "Review this full diff using defaults.", "mode": "full", "changed_lines": 60},
+      "checks": [
+        "Summarizer uses fixture-implementation/high explicitly; bug hunter, security, and verifier use fixture-review/max explicitly.",
+        "Every agent uses fresh context; summary never enters a finder or verifier prompt.",
+        "No implicit Haiku or parent-model fallback."
+      ]
+    },
+    {
+      "name": "enclosing-policy-and-explicit-override",
+      "input": {
+        "request": "Review the full diff; run its verifier on fixture-review at high effort.",
+        "mode": "full",
+        "MODEL_POLICY": {
+          "implementation": {"agent": "codex", "model": "fixture-other", "effort": "medium", "resolved": true},
+          "review": [{"agent": "codex", "model": "fixture-other", "effort": "medium", "resolved": true}]
+        },
+        "REVIEW_BUDGET": null
+      },
+      "checks": [
+        "Reuse enclosing fixture-other/medium for summary and finders, but explicit fixture-review/high for verifier.",
+        "No picker question or config reload; no re-resolution of already resolved policy entries.",
+        "Record the override and keep verifier evidence isolated."
+      ]
+    },
+    {
+      "name": "unsupported-effort",
+      "input": {
+        "request": "Use fixture-other/max for all review roles and defaults elsewhere.",
+        "mode": "small"
+      },
+      "checks": [
+        "Report unsupported max effort before dispatch; no omission of effort, switch to medium, or parent fallback.",
+        "Review is incomplete and lacks independently verified findings."
+      ]
+    },
+    {
+      "name": "explicit-inheritance-and-budget",
+      "input": {
+        "request": "Use default models for this full review, with review_budget: 2.",
+        "mode": "full",
+        "replace_config": {
+          "implementation": {"agent": "codex", "model": null, "effort": null},
+          "review": [{"agent": "codex", "model": null, "effort": null}],
+          "review_budget": 2,
+          "ranking_source": null
+        },
+        "host_inheritance": "Omitted model and effort inherit the parent settings on a fresh agent. Role types have no fixed model in this host."
+      },
+      "checks": [
+        "Omit model and reasoning_effort only because null explicitly selects inheritance; keep fork_turns none.",
+        "Summary is not a reviewer slot; two finders consume the budget, so no verifier can run.",
+        "Omit the unverified finding and label coverage incomplete."
+      ]
+    }
+  ]
+}
