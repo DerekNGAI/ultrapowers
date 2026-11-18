@@ -31,7 +31,9 @@ Edit [`skills/orca-poteto/models.yaml`](skills/orca-poteto/models.yaml). Each ro
 
 The skill resolves short names against that agent's available models on the execution host. It prefers the agent's configured provider when unambiguous and asks for a full ID when it cannot select one match. The `agent` field fixes the runtime, so a model choice cannot silently switch reviewers to another agent.
 
-At the start of a run the coordinator splits the request into units and proposes an implementation model for each one. It reads the models the host can launch, looks them up on the leaderboard at `ranking_source`, and rates each unit's demand: a hard unit gets the top-ranked model, an ordinary unit gets the `implementation` entry, and a mechanical unit gets a cheaper choice. You approve or edit the table once before anything is dispatched. The ranking is saved at `~/.cache/orca-poteto/model-ranking.md` and fetched again when the available models change or you ask for a refresh. Set `ranking_source` to `null`, or tell the run to use the defaults, to run every unit on the `implementation` entry. Reviewer models stay the same for the whole run.
+At the start of a run the coordinator offers up to three distinct implementation choices per unit: **Best value** (recommended), **Lowest cost** that meets the task's needs, and **Highest capability**. The table compares task-relevant capability evidence, supported effort, and input/output token prices with units, sources, and dates. Hard work does not automatically select the most expensive model or maximum effort. Duplicate choices share one row; unavailable evidence stays unknown. You choose or edit one row per unit before dispatch. Explicit model choices and requests to use defaults bypass the suggestions they settle. Reviewer models stay the same for the whole run.
+
+Capability and pricing evidence is saved at `~/.cache/orca-poteto/model-ranking.md` and refreshed when the source or candidate coverage changes, the UTC date changes, or you ask. Price comparisons use the selected provider's published billing terms; public API prices may differ from your actual charges. A stated input/output mix supports comparisons when rates cross. When capability data is unavailable or `ranking_source` is `null`, the picker offers the configured default. When prices are unavailable, it shows capability alternatives without claiming a value or cost winner.
 
 Explicit instructions for a run override individual fields without editing the file. The skill reads the config beside its own installed `SKILL.md`, not from the project being worked on.
 
@@ -66,7 +68,7 @@ The plugin exposes `/ultrapowers:code-turtle`, `/ultrapowers:orca-poteto`, and `
 
 Validate a local copy with `claude plugin validate /absolute/path/to/ultrapowers`. See the official [plugin component reference](https://code.claude.com/docs/en/plugins/components) and [subagent reference](https://code.claude.com/docs/en/sub-agents) for supported metadata.
 
-From the plugin repository, check diff preparation and final output with `python3 -B -m unittest discover -s skills/code-turtle/tests -v`.
+From the plugin repository, check diff preparation and final output with `python3 -B -m unittest discover -s skills/code-turtle/tests -v`. Model-picker changes can be replayed against the fictional [behavioral scenarios](skills/orca-poteto/tests/model-proposal-cases.json); give an evaluator only the inputs, then assess its choices against the checks.
 
 Replay [model-policy scenarios](skills/code-turtle/tests/model-policy-cases.json) by giving an independent evaluator only `shared_inputs` and each case's `input`, then assess the returned launch options and coverage against `checks`. These fictional scenarios test policy decisions; actual host launches are needed to verify model-option support.
 

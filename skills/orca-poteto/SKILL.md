@@ -51,9 +51,9 @@ After splitting the request into units, ask the user once, in a single message, 
 2. Reviewer entries: one or more agent, model, and effort choices, shared by every unit.
 3. Review budget: the most reviewer helpers one unit may start, or poteto's default counts.
 
-For item 1, build a per-unit proposal by following [model proposal](references/model-proposal.md) and show its table. For items 2 and 3, offer the file's value as the default. The user approves or edits the message before any dispatch.
+For item 1, follow [model proposal](references/model-proposal.md) and show up to three distinct choices per unit: Best value (recommended), Lowest cost that meets the task's needs, and Highest capability. Show capability evidence, input/output pricing with units and source dates, supported effort, and relevant tradeoffs; merge duplicate choices and label missing evidence. For items 2 and 3, offer the file's value as the default. The user selects or edits one choice per unit before any dispatch.
 
-Skip an item the user's request already settles. An implementation model named in the request applies to every unit it covers and replaces their proposal. Skip the message when the request settles all three or says to use the defaults; then every unit runs on the file's `implementation` entry. Use the host's question tool when it has one; otherwise ask in chat and wait for the reply.
+Skip an item the user's request already settles. An implementation model named in the request applies to every unit it covers and replaces their proposal. Skip the message when the request settles all three or says to use the defaults; then unit work and non-review helpers use the file's `implementation` entry, while independent reviewers retain `review`. Use the host's question tool when it has one; otherwise ask in chat and wait for the reply.
 
 Apply the approved answers and any other explicit overrides field by field over the file. Leave the file unchanged unless the user asks to save the choices. These settings override pstack and routed skills' model choices and automatic effort adjustments. A `null` inherits the selected agent's settings, not pstack's choices. Leave global agent settings and project files unchanged.
 
