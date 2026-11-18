@@ -1,0 +1,132 @@
+{
+  "purpose": "Behavioral replay inputs for model-proposal.md. These model IDs, observations, prices, scores, and URLs are fictional. Treat catalogs and source records as supplied host/tool responses; do not use live services or dispatch workers. Give an evaluator only shared_inputs and each case's input, then judge its answer against checks separately.",
+  "shared_inputs": {
+    "run_date": "2026-11-18",
+    "ranking_source": "https://ranking.example.test/coding",
+    "default": {"agent": "codex", "model": "fixture-premium", "effort": "high"},
+    "review": [{"agent": "codex", "model": "fixture-review", "effort": "high"}],
+    "review_budget": null,
+    "catalog": [
+      {"agent": "codex", "model": "fixture-standard", "efforts": ["medium", "high"], "default_effort": "high"},
+      {"agent": "codex", "model": "fixture-premium", "efforts": ["medium", "high", "max"], "default_effort": "high"},
+      {"agent": "codex", "model": "fixture-tiny", "efforts": ["medium"], "default_effort": "medium"},
+      {"agent": "codex", "model": "fixture-review", "efforts": ["high"], "default_effort": "high"}
+    ],
+    "capability": {
+      "source": "https://ranking.example.test/coding",
+      "retrieved": "2026-11-18",
+      "benchmark": "fixture-coding-suite-v1",
+      "direction": "higher is better",
+      "same_conditions": true,
+      "scores": [
+        {"model": "fixture-standard", "effort": "high", "score": 92},
+        {"model": "fixture-premium", "effort": "high", "score": 96},
+        {"model": "fixture-tiny", "effort": "medium", "score": 70}
+      ]
+    },
+    "pricing": {
+      "source": "https://pricing.example.test/provider",
+      "retrieved": "2026-11-18",
+      "currency": "USD",
+      "unit": "per million tokens",
+      "billing": "uncached synchronous public API list prices, same context tier; user's actual billing unknown",
+      "rates": [
+        {"model": "fixture-standard", "input": 2, "output": 8},
+        {"model": "fixture-premium", "input": 10, "output": 40},
+        {"model": "fixture-tiny", "input": 0.5, "output": 2}
+      ]
+    }
+  },
+  "cases": [
+    {
+      "name": "adequate-value-and-stronger-alternative",
+      "input": {
+        "request": "Rename the same option in three modules and update callers. Suggest models before dispatch.",
+        "acceptance": "Existing CLI integration checks cover every affected caller.",
+        "fit_evidence": "Operator's recorded trial of the identical migration pattern passed all acceptance checks with standard/high and premium/high; tiny/medium repeatedly missed callers. No trial compared other efforts."
+      },
+      "checks": [
+        "Recommend standard/high as Best value and Lowest cost in one row; tiny's cheaper price does not make it adequate.",
+        "Keep premium/high selectable as Highest capability; do not select premium/max or attach high-effort scores to max.",
+        "Show USD per million input/output tokens, both source URLs/dates, and public-list-price billing limitation; await a choice."
+      ]
+    },
+    {
+      "name": "crossed-prices-no-token-mix",
+      "input": {
+        "request": "Suggest models for the same caller migration; input/output token volume cannot yet be estimated.",
+        "fit_evidence": "Standard/high and premium/high passed the identical migration checks; tiny failed.",
+        "replace_pricing_rates": [
+          {"model": "fixture-standard", "input": 1, "output": 30},
+          {"model": "fixture-premium", "input": 8, "output": 5},
+          {"model": "fixture-tiny", "input": 0.5, "output": 2}
+        ]
+      },
+      "checks": [
+        "Expose the crossed input/output tradeoff without a Lowest cost winner or invented token mix.",
+        "Keep capability alternative available and qualify any value recommendation as lacking cost ordering."
+      ]
+    },
+    {
+      "name": "missing-pricing",
+      "input": {
+        "request": "Suggest models for the same caller migration.",
+        "fit_evidence": "Standard/high and premium/high passed; tiny failed.",
+        "pricing_unavailable": "Provider pricing and ranking cost fields cannot be retrieved; no usable cache exists."
+      },
+      "checks": [
+        "Mark prices unknown and avoid Best value and Lowest cost labels.",
+        "Offer the available premium/high default and supported capability alternatives without inventing rates or comparing unknown cost."
+      ]
+    },
+    {
+      "name": "no-capability-evidence",
+      "input": {
+        "request": "Suggest models for a parser cleanup.",
+        "capability_unavailable": "Ranking cannot be retrieved and cache has no scores; pricing remains available."
+      },
+      "checks": [
+        "Offer the verified premium/high configured default as fallback and explain missing capability evidence.",
+        "Do not call price or family evidence of quality, or claim a measured value winner."
+      ]
+    },
+    {
+      "name": "explicit-choice",
+      "input": {
+        "request": "Use fixture-standard at medium effort for this unit, keep the configured reviewers and budget, and proceed.",
+        "acceptance": "Run existing tests."
+      },
+      "checks": [
+        "Honor standard/medium without asking the user to choose again or increasing effort.",
+        "Preserve review settings and pass the explicit row to caller resolution; do not claim the high-effort score measures medium."
+      ]
+    },
+    {
+      "name": "defaults-disabled-ranking",
+      "input": {
+        "request": "Use defaults for implementation, reviewers, and review budget.",
+        "ranking_source": null
+      },
+      "checks": [
+        "Use the verified premium/high configured default without reopening selection or fetching rankings.",
+        "Preserve reviewer choices."
+      ]
+    },
+    {
+      "name": "input-output-cost-scenario",
+      "input": {
+        "request": "Suggest models for the same caller migration. Estimate using 100000 input and 10000 output tokens, excluding unknown extra reasoning tokens.",
+        "fit_evidence": "Standard/high and premium/high passed the same checks; tiny failed.",
+        "replace_pricing_rates": [
+          {"model": "fixture-standard", "input": 1, "output": 30},
+          {"model": "fixture-premium", "input": 8, "output": 5},
+          {"model": "fixture-tiny", "input": 0.5, "output": 2}
+        ]
+      },
+      "checks": [
+        "Compute standard's scenario cost as USD 0.40 and premium's as USD 0.85; identify standard as lowest cost among adequate candidates under that scenario.",
+        "Show both rates and the token assumptions; label the estimate a scenario rather than the user's bill and disclose excluded charges."
+      ]
+    }
+  ]
+}
