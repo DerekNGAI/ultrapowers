@@ -135,7 +135,7 @@
       },
       "checks": [
         "Ask one question covering model choices and lenses together, before any dispatch.",
-        "Suggest correctness on, security on citing access.py's access check, data on citing the migration, and performance off with no signal found.",
+        "Suggest correctness on, security on citing access.py's access check, data on citing the migration, and performance and design off with no signal found.",
         "Show the finder launch count: three lens finders x one review entry = 3, plus one summarizer.",
         "After the answer, launch only the chosen lens finders and pass the selected lenses and lenses_path in every neutral context."
       ]

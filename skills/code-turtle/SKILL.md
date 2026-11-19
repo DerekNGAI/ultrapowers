@@ -31,7 +31,7 @@ Use the context's size branch. Count additions plus deletions, without diff head
 
 | Branch | Work |
 | --- | --- |
-| `small`: fewer than 50 changed text lines, no binary changes or unavailable submodules | Run `ultrapowers:turtle-bug-hunter` once per `review` model, covering every selected lens. Read the diff and write the summary in the main session. |
+| `small`: fewer than 50 changed text lines, no binary changes or unavailable submodules | Run `ultrapowers:turtle-bug-hunter` once per `review` model, covering every selected verified lens, plus `ultrapowers:turtle-design` per model when `design` is selected. Read the diff and write the summary in the main session. |
 | `full`: 50 or more changed lines, binary changes, or unavailable submodules | Run `ultrapowers:turtle-summarizer` once, and each selected lens's finder once per `review` model, all in parallel. |
 
 Running every finder on every review model is the **ensemble**: independent models catch different defects, and agreement raises confidence. With one `review` entry it is a single pass.
@@ -46,11 +46,13 @@ Check each candidate against the seven-field schema. Drop unsupported or malform
 
 Merge candidates about the same root cause across models before verification, keeping every finder model that reported it, so each root cause gets one verifier. For every valid merged candidate within the reviewer budget, dispatch a fresh `ultrapowers:turtle-verifier` with its resolved model and effort options per [references/models.md](references/models.md). Run independent verifications in parallel when available. Pass only `{file, line, claim}` from that candidate and the neutral pointers from step 1. Exclude the finder's identity, reasoning, severity, failure scenario, comment, and all other findings. Give each verifier a separate task, not the finder's context or a resumed finder. Mark coverage incomplete and omit unverified claims if the budget is exhausted.
 
+For each valid design note within the budget, dispatch a fresh `ultrapowers:turtle-second-opinion` the same way, passing only `{file, line, note}` and the neutral pointers. Move a `data` or `performance` claim whose verifier confirms the behavior but finds no violated basis into the notes, per [references/lenses.md](references/lenses.md). Apply each opinion per the schema's **Design notes** section. Notes never enter `reviewed-findings.json`, and verified issues never become notes for being uncertain.
+
 Save each verdict and its independent evidence. Drop `rejected` claims. Reconcile a surviving claim's scenario and comment with the independent evidence, then add `verdict`. Require a violated source requirement, invariant, or caller expectation; drop policy preferences even if the verifier says `confirmed`. Apply the schema's exact-claim confirmation rule: narrow an overbroad claim to the proven defect, or downgrade it to `plausible`. Keep `plausible` visibly uncertain, with the unverified fact in the scenario and a `question:` comment. Never describe plausible claims as confirmed. If a verifier fails or cannot run, omit that unverified claim and mark the review incomplete. If there are no candidates, say that no verifier was needed. Never invent an issue to exercise verification.
 
 ## 4. Return the review
 
-Merge findings about the same root cause, even if the finders chose different nearby lines, and set `found_by` to every model that reported it. Save the reconciled nine-field array as `reviewed-findings.json` beside `context.json` and the plain-language `summary.md`. Use `[]` for a clean review.
+Merge findings about the same root cause, even if the finders chose different nearby lines, and set `found_by` to every model that reported it. Save the reconciled nine-field array as `reviewed-findings.json` beside `context.json` and the plain-language `summary.md`. Use `[]` for a clean review. When the `design` lens ran, save the seven-field notes as `reviewed-notes.json`, using `[]` when none survived; omit the file when it did not run.
 
 Run the finalizer with Python 3, resolving its path relative to this skill file:
 
@@ -58,11 +60,11 @@ Run the finalizer with Python 3, resolving its path relative to this skill file:
 python3 /absolute/path/to/code-turtle/scripts/finish_review.py '/absolute/artifact/directory'
 ```
 
-It validates the fields, verdict/comment combinations, and an exact source quote at each anchor before writing `findings.json` and the summary-first `review.md`. It removes identical file/claim pairs, ranks by severity, verdict, file, and line, and caps the output at ten issues. Concrete triggers, wrong results, semantic deduplication, and evidence judgments remain your responsibility. If validation fails, fix the reconciled input from the saved evidence and rerun. Never report an invalid file as a completed review.
+It validates the fields, verdict/comment combinations, and an exact source quote at each anchor before writing `findings.json`, `notes.json`, and the summary-first `review.md`. It removes identical file/claim pairs, merging their `found_by`, ranks by severity, verdict, agreeing models, file, and line, and caps the output at ten issues. It renders design notes after the issues, labeled as opinions, capped at five. Concrete triggers, wrong results, semantic deduplication, and evidence judgments remain your responsibility. If validation fails, fix the reconciled input from the saved evidence and rerun. Never report an invalid file as a completed review.
 
 Return `review.md` verbatim, starting with its summary. Add no preamble or issue count before the summary. The rendered issues include all seven schema fields plus `verdict` and `found_by`, the source quote in `failure_scenario`, and a pasteable comment block. State coverage limits and failed agent checks after the issues without turning them into findings.
 
-End with the artifact directory and a compact coverage note: target range, changed lines, `small` or `full`, lenses run and lenses skipped, finders completed per lens and model, number of verifier verdicts, rejected count, whether the review is complete, and the model/effort audit from [references/models.md](references/models.md). Report only the count of rejected claims, not their details. This note follows the summary and issues.
+End with the artifact directory and a compact coverage note: target range, changed lines, `small` or `full`, lenses run and lenses skipped, finders completed per lens and model, number of verifier verdicts and second opinions, rejected and disagreed counts, whether the review is complete, and the model/effort audit from [references/models.md](references/models.md). Report only the count of rejected claims, not their details. This note follows the summary and issues.
 
 Requested target:
 

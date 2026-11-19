@@ -33,8 +33,16 @@ class FinishReviewTests(unittest.TestCase):
                     comment="suggestion: Restore multiplication so three items at 500 cents total 1500.",
                     verdict="confirmed", found_by=["model-a"]) | overrides
 
-    def finish(self, findings):
+    def note(self, **overrides):
+        return dict(file="billing.py", line=2, lens="design",
+                    note="Pricing math sits in the formatter module, unlike the rest of billing.",
+                    comment="suggestion (non-blocking): Move total_cents beside the other pricing helpers.",
+                    second_opinion="agree", found_by=["model-a"]) | overrides
+
+    def finish(self, findings, notes=None):
         (self.artifacts / "reviewed-findings.json").write_text(json.dumps(findings))
+        if notes is not None:
+            (self.artifacts / "reviewed-notes.json").write_text(json.dumps(notes))
         return subprocess.run([sys.executable, str(SCRIPT), str(self.artifacts)], capture_output=True, text=True)
 
     def test_missing_verdict_cannot_produce_final_artifacts(self):
@@ -80,6 +88,31 @@ class FinishReviewTests(unittest.TestCase):
                          [("z.py", ["model-a", "model-b", "model-c"]), ("billing.py", ["model-a", "model-b"])])
         self.assertIn("**found_by:** model-a, model-b", result.stdout)
         self.assertIn("**lens:** correctness", result.stdout)
+
+    def test_design_notes_follow_issues_ranked_and_capped(self):
+        notes = [self.note(file=f"file-{index:02}.py", second_opinion="partly") for index in range(6)]
+        notes += [self.note(), self.note(found_by=["model-b"])]
+        result = self.finish([self.finding()], notes)
+        self.assertEqual(result.returncode, 0, result.stderr)
+        saved = json.loads((self.artifacts / "notes.json").read_text())
+        self.assertEqual(len(saved), 5)
+        self.assertEqual((saved[0]["file"], saved[0]["found_by"]), ("billing.py", ["model-a", "model-b"]))
+        self.assertLess(result.stdout.index("## Issues"), result.stdout.index("## Design notes"))
+        self.assertIn("Opinions, not verified defects.", result.stdout)
+        self.assertIn("2 additional design notes omitted", result.stdout)
+
+    def test_design_section_appears_only_when_the_lens_ran(self):
+        self.assertNotIn("## Design notes", self.finish([]).stdout)
+        self.assertFalse((self.artifacts / "notes.json").exists())
+        self.assertIn("No design notes.", self.finish([], []).stdout)
+
+    def test_invalid_design_notes_are_rejected(self):
+        for overrides in ({"second_opinion": "disagree"}, {"lens": "security"}, {"comment": "suggestion: Move it."},
+                          {"line": 99}, {"found_by": []}, {"extra": "field"}):
+            with self.subTest(overrides=overrides):
+                result = self.finish([], [self.note(**overrides)])
+                self.assertNotEqual(result.returncode, 0)
+                self.assertFalse((self.artifacts / "review.md").exists())
 
     def test_clean_review_saves_an_empty_array(self):
         result = self.finish([])

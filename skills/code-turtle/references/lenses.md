@@ -1,19 +1,20 @@
 # Review lenses
 
-A **lens** is one area a review covers. Each lens has a finder role, the diff signals that make it worth running, and the checks its finder applies. Every lens finding still needs the [finding schema](finding-schema.md)'s violated basis, concrete scenario, and source quote.
+A **lens** is one area a review covers. Each lens has a finder role, the diff signals that make it worth running, and the checks its finder applies. A **verified** lens returns issues that need the [finding schema](finding-schema.md)'s violated basis, concrete scenario, and source quote. The **advisory** `design` lens returns design notes: opinions checked for agreement by a second model, never presented as defects.
 
 ## Suggest lenses
 
 Read `changed_files` in `context.json` and skim the diff. Suggest each lens whose signals appear, and give the matching signal as the reason.
 
-| Lens | Full-mode finder | Suggest when the diff |
+| Lens | Finder | Suggest when the diff |
 | --- | --- | --- |
 | `correctness` | `turtle-bug-hunter` | Always. Turn it off only when the user explicitly asks. |
 | `security` | `turtle-security` | Touches anything beyond docs, comments, or tests. Name the strongest signal: external input, auth or sessions, secrets, shell, SQL or template construction, file paths, deserialization, or shared state across threads or requests. |
 | `data` | `turtle-data` | Touches migrations, schema or ORM model files, SQL or query-builder calls, transactions, caches, or a persisted or wire format. |
 | `performance` | `turtle-performance` | Adds loops over collections or fetched rows, queries or network calls, work on a request, render, or other hot path, large allocations, or reads without a bound. |
+| `design` (advisory) | `turtle-design` | Adds modules or files, changes a public API or exported interface, adds imports across module boundaries, or adds long or deeply nested functions or near-duplicate blocks. |
 
-The finder launch count is the selected full-mode lenses × `review` entries. In small mode it is one combined finder per `review` entry, covering every selected lens.
+The finder launch count is the selected lenses × `review` entries. In small mode, one combined finder per `review` entry covers every selected verified lens, and `design` keeps its own finder because it returns notes.
 
 ## `correctness` and `security`
 
@@ -42,3 +43,17 @@ Apply every check to code the diff adds or changes:
 - **Leaks.** A connection, file handle, subscription, or timer stays open on some path.
 
 The basis is a documented latency, memory, or call budget; an existing limit or batching convention; or a bound the code kept before the change. The scenario names a concrete input size or state and the observable cost: call count, complexity, memory growth, or a blocked thread.
+
+## `design` (advisory)
+
+Compare the change with the structure the repository already has, and apply every check:
+
+- **Boundaries.** A module reaches into another's internals, a lower layer imports a higher one, or logic lands in a module whose siblings hold a different concern.
+- **Interfaces.** A public function, endpoint, or type exposes an implementation detail, takes a flag that switches between unrelated behaviors, or breaks the naming and shape of its neighbors.
+- **Duplication.** The change copies logic that already exists in a helper or another module.
+- **Complexity.** A function the change adds or grows is long, deeply nested, or mixes several concerns where a split would make each part easier to read or test.
+- **Dead code and naming.** Code the change leaves unreachable, or a name that misleads about what the code does.
+
+Ground each note in the repository: name the neighbor, helper, or convention the change departs from. A note without a concrete suggested change is left out.
+
+A `data` or `performance` candidate whose verifier finds the code behaves as claimed but no violated basis can become a design note with that lens, through the same second-opinion check.

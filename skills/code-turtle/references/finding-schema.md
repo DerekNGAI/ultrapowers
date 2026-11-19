@@ -39,4 +39,18 @@ Confirmation must support the exact claim and its consequence. Conflicting prose
 
 For a rejected claim, `evidence` gives the counterexample or missing support. A missing or failed verifier is a review limitation, not a verdict.
 
+## Design notes
+
+The advisory `design` finder returns a separate JSON array of notes, or `[]`. Each note has exactly these five fields:
+
+| Field | Type | Content |
+| --- | --- | --- |
+| `file` | string | Repository-relative path. |
+| `line` | positive integer | A nonblank anchor line in the changed code. |
+| `lens` | string | `design`, or `data` or `performance` for a candidate moved here per [lenses](lenses.md). |
+| `note` | string | One or two sentences: what the change does, the repository neighbor or convention it departs from, and why that matters. |
+| `comment` | string | A pasteable comment starting with `suggestion (non-blocking):` that names the concrete change. |
+
+The second-opinion agent receives only `file`, `line`, and `note`, along with neutral review pointers. It returns `{"opinion": "agree" | "partly" | "disagree", "reason": "..."}`. Drop `disagree`. For `partly`, narrow the note and comment to the part the reason supports. Then add `second_opinion` and `found_by`, giving seven fields. Merge notes about the same concern, rank `agree` before `partly`, and report at most five.
+
 The orchestrator reconciles each surviving candidate with the verifier's independent evidence, then adds `verdict` and `found_by`. `found_by` is a nonempty list of the distinct resolved model IDs whose finders reported that root cause, taken from `model-dispatches.json`, never from a finder's own statement. Label an inherited model `inherited:<agent>`. Every reported issue has exactly the seven candidate fields plus `verdict` and `found_by`. When finders in different lenses report one root cause, keep the lens that best names it. Keep verifier evidence in the saved review artifacts. Drop rejected claims. Merge duplicate root causes and the union of their `found_by` lists, sort by severity, verdict, and then the number of agreeing models, and report at most ten issues.
