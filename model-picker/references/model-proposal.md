@@ -1,10 +1,10 @@
 # Model proposal
 
-Offer up to three distinct model choices per unit, balancing task fit, capability, and price. Mark **Best value** as recommended. The user chooses or edits the proposal in the Propose and ask message before dispatch. Explicit model or effort choices and a request to use defaults take precedence; skip suggestions for choices already settled.
+Offer up to three distinct model choices per unit, balancing task fit, capability, and price. Mark **Best value** as recommended. The user chooses or edits the proposal in the picker's single question before dispatch. Explicit model or effort choices and a request to use defaults take precedence; skip suggestions for choices already settled.
 
 ## 1. Candidates
 
-A **candidate** is an agent, exact model launch ID, and supported effort the execution host can launch. Enumerate the host's catalogs and effort support using its model-discovery tools; in Orca, use launch preferences and the selected agent's CLI. Keep the caller's runtime restrictions. The caller supplies the configured **default** and any fixed fields. If its availability cannot be verified, report that before dispatch rather than treating it as available.
+A **candidate** is an agent, exact model launch ID, and supported effort the execution host can launch. Enumerate the host's catalogs and effort support using its model-discovery tools; the caller names its catalog sources, such as Orca launch preferences or the native subagent tool's model options. Keep the caller's runtime restrictions. The caller supplies the configured **default** and any fixed fields. If its availability cannot be verified, report that before dispatch rather than treating it as available.
 
 Done when each catalog is listed or reported unreadable, and each proposed candidate is launchable.
 
@@ -14,7 +14,7 @@ Read the caller's `ranking_source` for capability evidence and speed where avail
 
 Get input and output token prices from the selected provider's published pricing, or the ranking source when it identifies that provider and billing conditions. Record currency, price per million tokens, billing mode, applicable context tier, source URL, and retrieval date. Record cache, batch, subscription, or reasoning-token charges separately when relevant. Public API list prices are a comparison reference unless they describe the user's billing; do not present them as the user's actual charge. Missing scores, prices, or effort-specific measurements stay **unknown**. Price and maximum supported effort are not evidence of capability.
 
-Cache this evidence at `${XDG_CACHE_HOME:-$HOME/.cache}/orca-poteto/model-ranking.md`. Reuse it only when the source URL, candidate/provider/effort coverage, required evidence fields, and retrieval date match the current run's UTC date. Refresh missing or older evidence, or when asked. Report retrieval failures instead of manufacturing values. Keep separate source dates when capability and pricing came from different pages.
+Cache this evidence at `${XDG_CACHE_HOME:-$HOME/.cache}/ultrapowers/model-ranking.md`. Reuse it only when the source URL, candidate/provider/effort coverage, required evidence fields, and retrieval date match the current run's UTC date. Refresh missing or older evidence, or when asked. Report retrieval failures instead of manufacturing values. Keep separate source dates when capability and pricing came from different pages.
 
 When `ranking_source` is `null`, capability evidence cannot be fetched, or every candidate is unranked, offer the available configured default with the reason. With capability but no comparable pricing, show the default and a supported capability alternative without claiming Best value or Lowest cost. Partial price data can support comparisons among priced candidates only; name the excluded candidates and qualify the recommendation accordingly.
 
@@ -48,7 +48,7 @@ Done when every unsettled unit has one to three distinct candidates and a recomm
 
 ## 5. Choice table
 
-Show the shortlist in the Propose and ask message:
+Show the shortlist in the picker's question:
 
 | Unit | Suggestion | Agent | Exact model ID | Effort | Input / output price | Fit and tradeoff |
 | --- | --- | --- | --- | --- | --- | --- |

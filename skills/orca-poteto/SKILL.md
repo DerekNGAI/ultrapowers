@@ -28,48 +28,15 @@ When the two skills disagree on a concern, the owner in this table wins.
 
 ## Model configuration
 
-Read [models.yaml](models.yaml) beside the loaded `SKILL.md` at the start of every run, not relative to the project's working directory. It is the only source of this skill's defaults. Require exactly these keys:
+At the start of every run, read the shared [model picker](../../model-picker/PICKER.md), resolving its path from the loaded `SKILL.md` after following directory symlinks. It owns the config file, precedence, the single question, name resolution, and the dispatch audit. Supply it this caller contract:
 
-- `implementation`: one entry. It is the default for every unit.
-- `review`: a nonempty list of entries. Several entries spread reviewers across models.
-- `review_budget`: a positive integer capping reviewer helpers per unit, or YAML `null` to keep each routed skill's reviewer count.
-- `ranking_source`: a nonempty URL of a public model leaderboard, or YAML `null` to run every unit on `implementation`.
+- **Role map.** Each unit's implementation and non-review helpers use `implementation`. Independent review, `interrogate` reviewers, code-review helpers, critics, cross-judges, and fix rechecks use `review`, including helpers started by implementation workers. A reviewer returns findings; assign fixes to implementation. Workers spread reviewers across the `review` entries per the [worker contract](references/worker-contract.md#review-budget).
+- **Proposal units.** Every unit, for its implementation choice. Reviewer entries are shared by every unit.
+- **Budget.** `review_budget` caps reviewer helpers per unit, fix rechecks included.
+- **Catalog sources.** Before resolving, read Orca's `references/coordinator-loop.md` launch-preferences section. Use Orca's launch preferences and the selected agent's CLI.
+- **Audit location.** Each unit's brief `LAUNCH` field and the final report.
 
-Each entry has exactly these fields:
-
-- `agent`: a nonempty Orca agent ID. It selects the runtime, not the model provider.
-- `model`: a nonempty short model name, a full provider ID, or YAML `null` to inherit the selected agent's configured default.
-- `effort`: a nonempty effort name, or YAML `null` to inherit that agent/model's configured default.
-
-If the file is missing or invalid, stop before dispatch and report the path and error. Missing fields, duplicate keys, empty strings, empty lists, and unknown fields are invalid, not requests to inherit defaults.
-
-### Propose and ask
-
-After splitting the request into units, ask the user once, in a single message, for this run's:
-
-1. Implementation agent, model, and effort for each unit.
-2. Reviewer entries: one or more agent, model, and effort choices, shared by every unit.
-3. Review budget: the most reviewer helpers one unit may start, or poteto's default counts.
-
-For item 1, follow [model proposal](references/model-proposal.md) and show up to three distinct choices per unit: Best value (recommended), Lowest cost that meets the task's needs, and Highest capability. Show capability evidence, input/output pricing with units and source dates, supported effort, and relevant tradeoffs; merge duplicate choices and label missing evidence. For items 2 and 3, offer the file's value as the default. The user selects or edits one choice per unit before any dispatch.
-
-Skip an item the user's request already settles. An implementation model named in the request applies to every unit it covers and replaces their proposal. Skip the message when the request settles all three or says to use the defaults; then unit work and non-review helpers use the file's `implementation` entry, while independent reviewers retain `review`. Use the host's question tool when it has one; otherwise ask in chat and wait for the reply.
-
-Apply the approved answers and any other explicit overrides field by field over the file. Leave the file unchanged unless the user asks to save the choices. These settings override pstack and routed skills' model choices and automatic effort adjustments. A `null` inherits the selected agent's settings, not pstack's choices. Leave global agent settings and project files unchanged.
-
-Use the unit's implementation entry for its implementation and non-review helpers. Use `review` for independent review, `interrogate` reviewers, code-review helpers, critics, cross-judges, and fix rechecks, including helpers started by implementation workers. A reviewer returns findings; assign fixes to implementation. Workers apply `review_budget` and spread reviewers across the `review` entries per the [worker contract](references/worker-contract.md#review-budget).
-
-### Resolve model names
-
-Before dispatch, read Orca's `references/coordinator-loop.md` launch-preferences section. Resolve each unit's implementation entry and every review entry against the execution host's selected agent, available model catalog, configured default, and supported efforts:
-
-1. Verify the configured agent exists on that host. Keep that runtime fixed throughout resolution. A runtime running the same model is not a substitute for the configured agent.
-2. For a full provider ID, require an exact available match. For a short name, collect models whose complete model name matches exactly, either as a bare ID or after the provider prefix. Use the catalog's model-name field when available; otherwise compare the final slash-delimited segment. Do not use substring, prefix, latest-version, or context-variant matches.
-3. When a short name has multiple matches, prefer the selected agent's configured provider only if its settings or default model identify that provider unambiguously. Do not privilege a bare ID over a provider-qualified ID. If exactly one match remains, use its exact launch ID. Otherwise report the candidates or missing name and ask for a full ID before dispatch.
-4. Verify the requested effort for the resolved model through the host's catalog or CLI. If `model` is `null` but effort is explicit, resolve the agent's configured default model first so a launch requiring `--model` can apply `--effort`. Keep inherited fields marked as inherited in the report.
-5. Record the configured name, resolved ID, agent, effort, and resolution evidence in the worker brief. If availability, provider preference, or effort support cannot be verified, stop that unit and report what is missing. Never silently change the agent, model, or effort.
-
-Resolve each distinct choice once per run. Carry each unit's implementation entry and the run's review entries into that unit's brief. A worker uses that resolved policy rather than loading a different installed copy of the config. If a later dispatch encounters a changed catalog or unavailable selection, stop and report it rather than reinterpreting the short name.
+The picker's settings override pstack and routed skills' model choices and automatic effort adjustments. A `null` inherits the selected agent's settings, not pstack's choices. Carry each unit's implementation entry and the run's review entries into that unit's brief. If a unit's selection is unavailable, stop that unit and report what is missing.
 
 ### Launch the selected runtime
 
@@ -107,9 +74,9 @@ Separate sessions do not isolate files. Every concurrent writer, including an ed
 
 ## Coordinator steps
 
-1. Load orchestration and the sibling `models.yaml`. Resolve the absolute paths to poteto and the worker contract. Record the Cleanup [baseline](#baseline).
+1. Load orchestration and the [model picker](../../model-picker/PICKER.md). Resolve the absolute paths to poteto and the worker contract. Record the Cleanup [baseline](#baseline).
 2. Split the request into bounded units. For each unit, set its goal, constraints, repository ownership, observable acceptance, implementation or review role, and authorized permissions. Leave playbook selection to the worker.
-3. Settle the run's models per [Propose and ask](#propose-and-ask), then resolve them per [Resolve model names](#resolve-model-names).
+3. Settle and resolve the run's models through the model picker per [Model configuration](#model-configuration).
 4. Write each brief per the next section. Start separate worker sessions per Orca's supervised loop, applying Workspace isolation and verifying the resulting placement.
 5. Before accepting a settled unit, inspect its relevant diff and verification evidence against its acceptance criteria. If evidence is missing or a criterion fails, return that specific gap to the responsible worker. Use the review dispatch rules above for additional review.
 6. Check whether the run is [quiescent](#quiescent). If it is, run the Cleanup steps without asking. If it is not, keep every workspace.
