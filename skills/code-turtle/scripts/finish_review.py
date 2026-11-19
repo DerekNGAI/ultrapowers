@@ -5,7 +5,8 @@ import re
 import sys
 
 
-FIELDS = {"file", "line", "severity", "claim", "failure_scenario", "comment", "verdict"}
+FIELDS = {"file", "line", "severity", "claim", "failure_scenario", "comment", "verdict", "found_by"}
+TEXT_FIELDS = FIELDS - {"line", "found_by"}
 SEVERITY = {"blocking": 0, "should-fix": 1, "minor": 2}
 VERDICT = {"confirmed": 0, "plausible": 1}
 
@@ -28,8 +29,11 @@ def finish(artifact_directory):
             raise ValueError(f"Issue {index} must have exactly {sorted(FIELDS)}.")
         if type(finding["line"]) is not int or finding["line"] < 1:
             raise ValueError(f"Issue {index} needs a positive integer line.")
-        if any(not isinstance(finding[key], str) or not finding[key].strip() for key in FIELDS - {"line"}):
+        if any(not isinstance(finding[key], str) or not finding[key].strip() for key in TEXT_FIELDS):
             raise ValueError(f"Issue {index} has an empty or non-string field.")
+        found_by = finding["found_by"]
+        if not isinstance(found_by, list) or not found_by or any(not isinstance(model, str) or not model.strip() for model in found_by) or len(set(found_by)) != len(found_by):
+            raise ValueError(f"Issue {index} needs found_by as a nonempty list of distinct model labels.")
         path = PurePosixPath(finding["file"])
         if path.is_absolute() or ".." in path.parts or str(path) == ".":
             raise ValueError(f"Issue {index} needs a repository-relative file.")
@@ -56,12 +60,15 @@ def finish(artifact_directory):
     findings.sort(key=lambda issue: (SEVERITY[issue["severity"]], VERDICT[issue["verdict"]], issue["file"], issue["line"]))
     unique = {}
     for finding in findings:
-        unique.setdefault((finding["file"], finding["claim"]), finding)
-    omitted = max(0, len(unique) - 10)
-    findings = list(unique.values())[:10]
+        kept = unique.setdefault((finding["file"], finding["claim"]), finding)
+        kept["found_by"] = list(dict.fromkeys(kept["found_by"] + finding["found_by"]))
+    findings = sorted(unique.values(), key=lambda issue: (SEVERITY[issue["severity"]], VERDICT[issue["verdict"]], -len(issue["found_by"]), issue["file"], issue["line"]))
+    omitted = max(0, len(findings) - 10)
+    findings = findings[:10]
     sections = [f"## Summary\n\n{summary}", "## Issues"]
     for index, finding in enumerate(findings, 1):
         fields = "\n".join(f"- **{key}:** {finding[key]}" for key in ("file", "line", "severity", "claim", "failure_scenario", "verdict"))
+        fields += f"\n- **found_by:** {', '.join(finding['found_by'])}"
         fence = "`" * max(3, max((len(part) for part in re.findall(r"`+", finding["comment"])), default=0) + 1)
         sections.append(f"### {index}. {finding['file']}:{finding['line']}\n\n{fields}\n\n**comment:**\n\n{fence}\n{finding['comment']}\n{fence}")
     if not findings:

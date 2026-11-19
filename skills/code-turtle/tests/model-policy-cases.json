@@ -101,6 +101,29 @@
         "Summary is not a reviewer slot; two finders consume the budget, so no verifier can run.",
         "Omit the unverified finding and label coverage incomplete."
       ]
+    },
+    {
+      "name": "ensemble-two-review-models",
+      "input": {
+        "request": "Review this full diff using defaults.",
+        "mode": "full",
+        "replace_config": {
+          "implementation": {"agent": "codex", "model": "fixture-implementation", "effort": "high"},
+          "review": [
+            {"agent": "codex", "model": "fixture-review", "effort": "max"},
+            {"agent": "codex", "model": "fixture-other", "effort": "medium"}
+          ],
+          "review_budget": null,
+          "ranking_source": null
+        },
+        "finder_results": "Both bug hunters report the access.py:4 root cause; both security finders return []."
+      },
+      "checks": [
+        "One summarizer on fixture-implementation/high; bug hunter and security each launch once on fixture-review/max and once on fixture-other/medium, four finders in total.",
+        "The two access.py reports merge into one candidate before verification, so exactly one verifier runs.",
+        "Both models found the claim, so the verifier falls back to the first entry, fixture-review/max, and receives only file/line/claim.",
+        "The reported issue has found_by [fixture-review, fixture-other], taken from the dispatch record."
+      ]
     }
   ]
 }

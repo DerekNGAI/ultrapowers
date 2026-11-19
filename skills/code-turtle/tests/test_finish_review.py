@@ -31,7 +31,7 @@ class FinishReviewTests(unittest.TestCase):
         return dict(file="billing.py", line=2, severity="should-fix", claim="The total adds instead of multiplying.",
                     failure_scenario="total_cents(500, 3) returns 503 instead of 1500 at `return price + count`.",
                     comment="suggestion: Restore multiplication so three items at 500 cents total 1500.",
-                    verdict="confirmed") | overrides
+                    verdict="confirmed", found_by=["model-a"]) | overrides
 
     def finish(self, findings):
         (self.artifacts / "reviewed-findings.json").write_text(json.dumps(findings))
@@ -49,7 +49,8 @@ class FinishReviewTests(unittest.TestCase):
     def test_invalid_schema_and_certainty_are_rejected(self):
         for overrides in ({"extra": "field"}, {"line": True}, {"file": "../billing.py"},
                           {"verdict": "rejected"}, {"verdict": "plausible"},
-                          {"verdict": "plausible", "severity": "blocking", "comment": "question: Is this reachable?"}):
+                          {"verdict": "plausible", "severity": "blocking", "comment": "question: Is this reachable?"},
+                          {"found_by": []}, {"found_by": "model-a"}, {"found_by": ["model-a", "model-a"]}, {"found_by": [""]}):
             with self.subTest(overrides=overrides):
                 self.assertNotEqual(self.finish([self.finding(**overrides)]).returncode, 0)
 
@@ -63,11 +64,21 @@ class FinishReviewTests(unittest.TestCase):
         self.assertEqual(len(saved), 10)
         self.assertEqual([item["file"] for item in saved[:2]], ["billing.py", "z.py"])
         self.assertEqual(saved[0]["line"], 2)
-        self.assertTrue(all(len(item) == 7 for item in saved))
+        self.assertTrue(all(len(item) == 8 for item in saved))
         self.assertTrue(result.stdout.startswith("## Summary\n"))
         self.assertIn("4 additional issues omitted", result.stdout)
         self.assertEqual((self.artifacts / "review.md").read_text(), result.stdout)
         self.assertIn("**verdict:** plausible", result.stdout)
+
+    def test_duplicates_merge_their_models_and_agreement_ranks_first(self):
+        findings = [self.finding(), self.finding(found_by=["model-b"]), self.finding(found_by=["model-a", "model-b"]),
+                    self.finding(file="z.py", claim="A second defect.", found_by=["model-a", "model-b", "model-c"])]
+        result = self.finish(findings)
+        self.assertEqual(result.returncode, 0, result.stderr)
+        saved = json.loads((self.artifacts / "findings.json").read_text())
+        self.assertEqual([(item["file"], item["found_by"]) for item in saved],
+                         [("z.py", ["model-a", "model-b", "model-c"]), ("billing.py", ["model-a", "model-b"])])
+        self.assertIn("**found_by:** model-a, model-b", result.stdout)
 
     def test_clean_review_saves_an_empty_array(self):
         result = self.finish([])
