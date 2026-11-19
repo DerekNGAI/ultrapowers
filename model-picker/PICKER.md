@@ -7,7 +7,8 @@ Shared model selection for ultrapowers skills. A caller skill reads this file by
 The caller supplies:
 
 - **Role map.** Each role it dispatches, the config entry that role uses (`implementation` or `review`), and any rule for choosing among several `review` entries.
-- **Proposal units.** The roles or work units that get a per-unit model proposal, with the goal and acceptance that define task fit.
+- **Proposal units.** The roles or work units that get a per-unit `implementation` proposal, with the goal and acceptance that define task fit.
+- **Review task.** What the review models will check, used as task fit for review suggestions, and how the caller's launch count grows with each selected review model.
 - **Catalog sources.** The runtimes and dispatch routes the execution host can actually launch, and where to read their model and effort catalogs.
 - **Extra items**, optional. Caller choices to ask in the same question, such as code-turtle's review lenses.
 - **Audit location.** Where to save the dispatch record from [Audit](#6-audit).
@@ -44,7 +45,7 @@ When an enclosing brief supplies a resolved policy, reuse its resolved IDs and e
 Ask the user once, in a single message, before any dispatch:
 
 1. The `implementation` choice for each proposal unit that maps to it. Follow [model proposal](references/model-proposal.md): up to three distinct choices per unit, with Best value recommended.
-2. The `review` entries. Offer the file's list as the default. For proposal units that map to `review`, use the model proposal with that unit's mapped entry as its default.
+2. The `review` models, as a multi-select. Preselect the file's entries. When `ranking_source` is set, add the model proposal's shortlist for the review task as further options, labeled Best value, Lowest cost, and Highest capability, and merge any that match a file entry; otherwise list the other launchable catalog models as unranked options. The user keeps, removes, or adds models, and at least one must remain. Show the caller's launch count for the current selection and for each added model.
 3. The review budget, with the file's value or the caller's count as the default.
 4. The caller's extra items.
 

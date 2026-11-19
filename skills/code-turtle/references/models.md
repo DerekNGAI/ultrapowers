@@ -12,7 +12,8 @@ Supply the picker this role map:
 | Each selected lens's finder, or the small-mode combined finder | Every `review` entry: one launch of each finder per entry |
 | Each fresh verifier or second opinion | A `review` entry whose model is absent from the claim's or note's finder models, when one exists; otherwise the first entry |
 
-- **Proposal units.** The review roles, each defaulting to its mapped entry. Show the finder launch count (finders × `review` entries) beside the review choice so the user sees the ensemble's cost. Keep an explicitly supplied review list fixed. Show the summarizer and review selections in the same question.
+- **Proposal units.** The full-mode summarizer, for its `implementation` choice. Small mode has none.
+- **Review task.** Finding and verifying defects in this diff under the selected lenses. The review multi-select picks the ensemble: each selected model runs every finder. The launch count is finders × selected models, plus verifiers later. Keep an explicitly supplied review list fixed.
 - **Extra items.** The lens selection from [lenses](lenses.md).
 - **Catalog sources.** The dispatch routes this host can actually launch; Orca is not required.
 - **Audit location.** `model-dispatches.json` beside `context.json`. Add the candidate file and line for each verifier. Save no finder reasoning in a verifier's prompt.

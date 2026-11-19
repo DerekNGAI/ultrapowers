@@ -139,6 +139,21 @@
         "Show the finder launch count: three lens finders x one review entry = 3, plus one summarizer.",
         "After the answer, launch only the chosen lens finders and pass the selected lenses and lenses_path in every neutral context."
       ]
+    },
+    {
+      "name": "ensemble-chosen-in-the-question",
+      "input": {
+        "request": "Review this full diff.",
+        "mode": "full",
+        "changed_files": ["access.py"],
+        "user_answer": "Lenses: correctness and security. Review models: fixture-review/max and fixture-other/medium."
+      },
+      "checks": [
+        "The question offers review models as a multi-select with fixture-review/max preselected and fixture-other/medium as an unranked option, since ranking_source is null.",
+        "It shows the finder count for the current selection (2) and with fixture-other added (4).",
+        "After the answer, bug hunter and security each launch on both models without editing models.yaml.",
+        "No model proposal is shown for individual review roles; only the summarizer gets an implementation choice."
+      ]
     }
   ]
 }

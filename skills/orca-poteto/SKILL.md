@@ -31,7 +31,8 @@ When the two skills disagree on a concern, the owner in this table wins.
 At the start of every run, read the shared [model picker](../../model-picker/PICKER.md), resolving its path from the loaded `SKILL.md` after following directory symlinks. It owns the config file, precedence, the single question, name resolution, and the dispatch audit. Supply it this caller contract:
 
 - **Role map.** Each unit's implementation and non-review helpers use `implementation`. Independent review, `interrogate` reviewers, code-review helpers, critics, cross-judges, and fix rechecks use `review`, including helpers started by implementation workers. A reviewer returns findings; assign fixes to implementation. Workers spread reviewers across the `review` entries per the [worker contract](references/worker-contract.md#review-budget).
-- **Proposal units.** Every unit, for its implementation choice. Reviewer entries are shared by every unit.
+- **Proposal units.** Every unit, for its implementation choice.
+- **Review task.** Reviewing every unit's work. The review models are shared by every unit; each added model gives workers another entry to spread reviewers across, within the budget.
 - **Budget.** `review_budget` caps reviewer helpers per unit, fix rechecks included.
 - **Catalog sources.** Before resolving, read Orca's `references/coordinator-loop.md` launch-preferences section. Use Orca's launch preferences and the selected agent's CLI.
 - **Audit location.** Each unit's brief `LAUNCH` field and the final report.

@@ -34,7 +34,7 @@ Use the context's size branch. Count additions plus deletions, without diff head
 | `small`: fewer than 50 changed text lines, no binary changes or unavailable submodules | Run `ultrapowers:turtle-bug-hunter` once per `review` model, covering every selected verified lens, plus `ultrapowers:turtle-design` per model when `design` is selected. Read the diff and write the summary in the main session. |
 | `full`: 50 or more changed lines, binary changes, or unavailable submodules | Run `ultrapowers:turtle-summarizer` once, and each selected lens's finder once per `review` model, all in parallel. |
 
-Running every finder on every review model is the **ensemble**: independent models catch different defects, and agreement raises confidence. With one `review` entry it is a single pass.
+Running every finder on every review model is the **ensemble**: independent models catch different defects, and agreement raises confidence. The user picks the ensemble's models in the picker's review multi-select; one selected model is a single pass.
 
 Invoke the roles with the resolved model policy through the host's independent subagent mechanism. Load their definitions from `../../agents/turtle-*.md` relative to the resolved skill directory. Give each agent only its role instructions and neutral pointers, with no inherited conversation. Save the returned summary and each candidate array, labeled with its finder's role and model, in the artifact directory, outside the repository. If independent agents or a selected model or effort are unavailable, report the review as incomplete.
 
