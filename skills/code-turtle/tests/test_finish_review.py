@@ -28,7 +28,7 @@ class FinishReviewTests(unittest.TestCase):
         (self.artifacts / "summary.md").write_text("The change replaces multiplication with addition. It changes the order total.\n")
 
     def finding(self, **overrides):
-        return dict(file="billing.py", line=2, severity="should-fix", claim="The total adds instead of multiplying.",
+        return dict(file="billing.py", line=2, severity="should-fix", lens="correctness", claim="The total adds instead of multiplying.",
                     failure_scenario="total_cents(500, 3) returns 503 instead of 1500 at `return price + count`.",
                     comment="suggestion: Restore multiplication so three items at 500 cents total 1500.",
                     verdict="confirmed", found_by=["model-a"]) | overrides
@@ -50,7 +50,7 @@ class FinishReviewTests(unittest.TestCase):
         for overrides in ({"extra": "field"}, {"line": True}, {"file": "../billing.py"},
                           {"verdict": "rejected"}, {"verdict": "plausible"},
                           {"verdict": "plausible", "severity": "blocking", "comment": "question: Is this reachable?"},
-                          {"found_by": []}, {"found_by": "model-a"}, {"found_by": ["model-a", "model-a"]}, {"found_by": [""]}):
+                          {"found_by": []}, {"lens": "style"}, {"found_by": "model-a"}, {"found_by": ["model-a", "model-a"]}, {"found_by": [""]}):
             with self.subTest(overrides=overrides):
                 self.assertNotEqual(self.finish([self.finding(**overrides)]).returncode, 0)
 
@@ -64,7 +64,7 @@ class FinishReviewTests(unittest.TestCase):
         self.assertEqual(len(saved), 10)
         self.assertEqual([item["file"] for item in saved[:2]], ["billing.py", "z.py"])
         self.assertEqual(saved[0]["line"], 2)
-        self.assertTrue(all(len(item) == 8 for item in saved))
+        self.assertTrue(all(len(item) == 9 for item in saved))
         self.assertTrue(result.stdout.startswith("## Summary\n"))
         self.assertIn("4 additional issues omitted", result.stdout)
         self.assertEqual((self.artifacts / "review.md").read_text(), result.stdout)
@@ -79,6 +79,7 @@ class FinishReviewTests(unittest.TestCase):
         self.assertEqual([(item["file"], item["found_by"]) for item in saved],
                          [("z.py", ["model-a", "model-b", "model-c"]), ("billing.py", ["model-a", "model-b"])])
         self.assertIn("**found_by:** model-a, model-b", result.stdout)
+        self.assertIn("**lens:** correctness", result.stdout)
 
     def test_clean_review_saves_an_empty_array(self):
         result = self.finish([])

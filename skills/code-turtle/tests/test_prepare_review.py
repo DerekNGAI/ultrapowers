@@ -61,6 +61,8 @@ class PrepareReviewTests(unittest.TestCase):
         context = self.review(full)
         self.assertEqual(context["changed_lines"], 50)
         self.assertEqual(context["mode"], "full")
+        self.assertEqual(context["changed_files"], ["new.txt"])
+        self.assertTrue(Path(context["lenses_path"]).is_file())
 
     def test_working_copy_includes_staged_and_unstaged_but_excludes_untracked(self):
         (self.repo / "staged.txt").write_text("staged\n")

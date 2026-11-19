@@ -5,10 +5,11 @@ import re
 import sys
 
 
-FIELDS = {"file", "line", "severity", "claim", "failure_scenario", "comment", "verdict", "found_by"}
+FIELDS = {"file", "line", "severity", "lens", "claim", "failure_scenario", "comment", "verdict", "found_by"}
 TEXT_FIELDS = FIELDS - {"line", "found_by"}
 SEVERITY = {"blocking": 0, "should-fix": 1, "minor": 2}
 VERDICT = {"confirmed": 0, "plausible": 1}
+LENSES = {"correctness", "security", "data", "performance"}
 
 
 def finish(artifact_directory):
@@ -39,6 +40,8 @@ def finish(artifact_directory):
             raise ValueError(f"Issue {index} needs a repository-relative file.")
         if finding["severity"] not in SEVERITY or finding["verdict"] not in VERDICT:
             raise ValueError(f"Issue {index} needs a supported severity and a surviving verdict.")
+        if finding["lens"] not in LENSES:
+            raise ValueError(f"Issue {index} needs a lens from {sorted(LENSES)}.")
         plausible = finding["verdict"] == "plausible"
         if plausible and finding["severity"] == "blocking":
             raise ValueError(f"Issue {index} cannot be both plausible and blocking.")
@@ -67,7 +70,7 @@ def finish(artifact_directory):
     findings = findings[:10]
     sections = [f"## Summary\n\n{summary}", "## Issues"]
     for index, finding in enumerate(findings, 1):
-        fields = "\n".join(f"- **{key}:** {finding[key]}" for key in ("file", "line", "severity", "claim", "failure_scenario", "verdict"))
+        fields = "\n".join(f"- **{key}:** {finding[key]}" for key in ("file", "line", "severity", "lens", "claim", "failure_scenario", "verdict"))
         fields += f"\n- **found_by:** {', '.join(finding['found_by'])}"
         fence = "`" * max(3, max((len(part) for part in re.findall(r"`+", finding["comment"])), default=0) + 1)
         sections.append(f"### {index}. {finding['file']}:{finding['line']}\n\n{fields}\n\n**comment:**\n\n{fence}\n{finding['comment']}\n{fence}")

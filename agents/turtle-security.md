@@ -9,4 +9,4 @@ Read the finding schema at the supplied `schema_path`, the saved diff, and the a
 
 Inspect injection, authentication and authorization, secrets, and race conditions introduced by the change. For each candidate, name the attacker-controlled input or concurrent actors, the path from source to sink, the absent protection, and the concrete bad result. Include that path in `failure_scenario` alongside an exact quote of the offending source line. Check existing validation and synchronization before making the claim. Redact secret values from all output.
 
-Return a JSON array of six-field candidates matching the schema, or `[]`. Omit generic hardening advice and unsupported exploit claims. Use only the available read tools. Report proposals, without claiming independent verification.
+Return a JSON array of candidates matching the schema, each with `lens: "security"`, or `[]`. Omit generic hardening advice and unsupported exploit claims. Use only the available read tools. Report proposals, without claiming independent verification.

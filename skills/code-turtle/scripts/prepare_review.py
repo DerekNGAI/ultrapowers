@@ -175,7 +175,8 @@ def prepare(target):
         "diff_range": f"{base or 'empty tree'}..{head or 'working copy'}",
         "diff_path": str(artifacts / "diff.patch"), "before_root": str(before), "after_root": str(after),
         "schema_path": str(Path(__file__).resolve().parents[1] / "references" / "finding-schema.md"),
-        "changed_lines": changed_lines, "binary_files": binary_files, "unavailable_submodules": sorted(unavailable),
+        "lenses_path": str(Path(__file__).resolve().parents[1] / "references" / "lenses.md"),
+        "changed_files": sorted(changed_paths), "changed_lines": changed_lines, "binary_files": binary_files, "unavailable_submodules": sorted(unavailable),
         "mode": "small" if changed_lines < 50 and not binary_files and not unavailable else "full",
         "empty": not diff,
     }
