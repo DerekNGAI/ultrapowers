@@ -1,6 +1,11 @@
+---
+name: model-picker
+description: Select the agent, model, and effort for each role before dispatching agents or workers. Use when another skill needs models resolved for a run, or when asked to pick or compare models for a task.
+---
+
 # Model picker
 
-Shared model selection for ultrapowers skills. A caller skill reads this file by path, supplies its **role map**, and gets one resolved selection per role before any dispatch. Caller-specific rules, such as Orca launch flags, reviewer budgets, and verifier isolation, stay in the caller.
+Shared model selection for agent skills. A caller skill loads this skill, supplies its **role map**, and gets one resolved selection per role before any dispatch. Caller-specific rules, such as Orca launch flags, reviewer budgets, and verifier isolation, stay in the caller.
 
 ## Caller contract
 

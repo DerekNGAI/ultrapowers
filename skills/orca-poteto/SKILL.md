@@ -28,7 +28,7 @@ When the two skills disagree on a concern, the owner in this table wins.
 
 ## Model configuration
 
-At the start of every run, read the shared [model picker](../../model-picker/PICKER.md), resolving its path from the loaded `SKILL.md` after following directory symlinks. It owns the config file, precedence, the single question, name resolution, and the dispatch audit. Supply it this caller contract:
+At the start of every run, load the installed `model-picker` skill (`ultrapowers:model-picker` in Claude Code). It owns the config file, precedence, the single question, name resolution, and the dispatch audit. Supply it this caller contract:
 
 - **Role map.** Each unit's implementation and non-review helpers use `implementation`. Independent review, `interrogate` reviewers, code-review helpers, critics, cross-judges, and fix rechecks use `review`, including helpers started by implementation workers. A reviewer returns findings; assign fixes to implementation. Workers spread reviewers across the `review` entries per the [worker contract](references/worker-contract.md#review-budget).
 - **Proposal units.** Every unit, for its implementation choice.
@@ -75,7 +75,7 @@ Separate sessions do not isolate files. Every concurrent writer, including an ed
 
 ## Coordinator steps
 
-1. Load orchestration and the [model picker](../../model-picker/PICKER.md). Resolve the absolute paths to poteto and the worker contract. Record the Cleanup [baseline](#baseline).
+1. Load orchestration and the `model-picker` skill. Resolve the absolute paths to poteto and the worker contract. Record the Cleanup [baseline](#baseline).
 2. Split the request into bounded units. For each unit, set its goal, constraints, repository ownership, observable acceptance, implementation or review role, and authorized permissions. Leave playbook selection to the worker.
 3. Settle and resolve the run's models through the model picker per [Model configuration](#model-configuration).
 4. Write each brief per the next section. Start separate worker sessions per Orca's supervised loop, applying Workspace isolation and verifying the resulting placement.

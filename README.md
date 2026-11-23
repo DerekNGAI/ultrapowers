@@ -1,10 +1,11 @@
 # ultrapowers
 
-Agent skills for multi-agent work coordinated by Orca and atomic commits. Each skill is a folder under `skills/` in the [Agent Skills](https://agentskills.io) format. The repository root is also a Claude Code plugin named `ultrapowers`.
+Agent skills for multi-agent work coordinated by Orca, model selection, and atomic commits. Each skill is a folder under `skills/` in the [Agent Skills](https://agentskills.io) format. The repository root is also a Claude Code plugin named `ultrapowers`.
 
 ## Skills
 
 - `orca-poteto`. An Orca coordinator assigns bounded tasks to separate poteto worker sessions. Each worker selects its poteto playbook and owns implementation, verification, and prescribed reviews. Each worker gets explicit commit, push, and PR permissions. The skill never grants merge. When a run settles with nothing waiting on the user, the coordinator removes the worktrees it created, keeps the deliverable branches, and switches its checkout back to the original branch. Status: a recommended adaptation, not a tested integration.
+- `model-picker`. Picks the agent, model, and effort for each role before a skill dispatches agents, with a Best value / Lowest cost / Highest capability proposal and one question. Other skills and agents, such as Codex, load it as a regular skill. See [Configure agents and models](#configure-agents-and-models).
 - `commit-style`. Atomic commits with [Conventional Commits](https://www.conventionalcommits.org/en/v1.0.0/) messages. The agent reads the repository's own convention first, splits the change into atomic commits, stages by path, verifies, and writes a typed header with a body that explains why. It needs neither Orca nor poteto.
 
 ## Requirements
@@ -20,7 +21,7 @@ The wrapper leaves both underlying skills and their standalone settings unchange
 
 ## Configure agents and models
 
-`orca-poteto` uses the model picker in [`model-picker/`](model-picker/PICKER.md). Edit [`model-picker/models.yaml`](model-picker/models.yaml). Each role has an `agent`, `model`, and `effort`. Use short model names or full provider IDs. Set `model` or `effort` to YAML `null` to inherit the selected agent's configured default.
+`orca-poteto` uses the [`model-picker`](skills/model-picker/SKILL.md) skill, and any other skill or agent can load it the same way. Edit [`skills/model-picker/models.yaml`](skills/model-picker/models.yaml). Each role has an `agent`, `model`, and `effort`. Use short model names or full provider IDs. Set `model` or `effort` to YAML `null` to inherit the selected agent's configured default.
 
 The picker resolves short names against that agent's available models on the execution host. It prefers the agent's configured provider when unambiguous and asks for a full ID when it cannot select one match. The `agent` field fixes the runtime, so a model choice cannot silently switch reviewers to another agent.
 
@@ -28,7 +29,7 @@ Before dispatch, the picker asks one question. It offers up to three distinct mo
 
 Capability and pricing evidence is saved at `~/.cache/ultrapowers/model-ranking.md` and refreshed when the source or candidate coverage changes, the UTC date changes, or you ask. Price comparisons use the selected provider's published billing terms; public API prices may differ from your actual charges. A stated input/output mix supports comparisons when rates cross. When capability data is unavailable or `ranking_source` is `null`, the picker offers the configured default. When prices are unavailable, it shows capability alternatives without claiming a value or cost winner.
 
-Explicit instructions for a run override individual fields without editing the file. The picker reads the config beside its own `PICKER.md`, not from the project being worked on.
+Explicit instructions for a run override individual fields without editing the file. The picker reads the `models.yaml` inside its own installed skill folder, not from the project being worked on.
 
 ## Install
 
@@ -55,11 +56,11 @@ You can also install the published repository from inside Claude Code after the 
 /plugin install ultrapowers --marketplace DerekNGAI/ultrapowers
 ```
 
-The plugin exposes `/ultrapowers:orca-poteto` and `/ultrapowers:commit-style`. It adds no agents, hooks, or global model settings.
+The plugin exposes `/ultrapowers:orca-poteto`, `/ultrapowers:model-picker`, and `/ultrapowers:commit-style`. It adds no agents, hooks, or global model settings.
 
 Validate a local copy with `claude plugin validate /absolute/path/to/ultrapowers`. See the official [plugin component reference](https://code.claude.com/docs/en/plugins/components) for supported metadata.
 
-Model-picker changes can be replayed against the fictional [behavioral scenarios](model-picker/tests/model-proposal-cases.json); give an evaluator only the inputs, then assess its choices against the checks.
+Model-picker changes can be replayed against the fictional [behavioral scenarios](skills/model-picker/tests/model-proposal-cases.json); give an evaluator only the inputs, then assess its choices against the checks.
 
 ### Directory links for other agents
 
@@ -72,6 +73,6 @@ ln -s "$PWD/skills/orca-poteto" ~/.claude/skills/orca-poteto
 ln -s "$PWD/skills/orca-poteto" ~/.grok/skills/orca-poteto
 ```
 
-Link `commit-style` the same way, for example `ln -s "$PWD/skills/commit-style" ~/.claude/skills/commit-style`.
+Link `model-picker` and `commit-style` the same way, for example `ln -s "$PWD/skills/model-picker" ~/.codex/skills/model-picker`. `orca-poteto` needs `model-picker` installed beside it.
 
-Use these commands only for destinations that do not already exist. If an agent has a copied installation, update the whole skill directory, including `SKILL.md` and references. `orca-poteto` reads `model-picker/` two levels above its resolved skill directory. Keep it beside `skills/` in a copied installation, preserving local model choices in `models.yaml`. Start a fresh coordinator conversation to use the updated instructions without previously loaded poteto instructions.
+Use these commands only for destinations that do not already exist. If an agent has a copied installation, update the whole skill directory, including `SKILL.md` and references. For `model-picker`, preserve local model choices in `models.yaml`. Start a fresh coordinator conversation to use the updated instructions without previously loaded poteto instructions.
