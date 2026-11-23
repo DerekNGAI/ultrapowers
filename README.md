@@ -4,7 +4,7 @@ Agent skills for multi-agent work coordinated by Orca, model selection, and atom
 
 ## Skills
 
-- `orca-poteto`. An Orca coordinator assigns bounded tasks to separate poteto worker sessions. Each worker selects its poteto playbook and owns implementation, verification, and prescribed reviews. Each worker gets explicit commit, push, and PR permissions. The skill never grants merge. When a run settles with nothing waiting on the user, the coordinator removes the worktrees it created, keeps the deliverable branches, and switches its checkout back to the original branch. Status: a recommended adaptation, not a tested integration.
+- `orca-poteto`. The default flow for every implementation task. The coordinator splits the request into units and tiers each one: it does `trivial` units itself in its own worktree, gives `standard` units to plain Orca workers, and gives `complex` units (several repositories or many files, open design, migrations, schema, or security) to Orca workers running poteto-mode. It posts each unit's tier and reason before dispatch, and starts independent units in parallel. Each worker gets explicit commit, push, and PR permissions. The skill never grants merge. When a run settles with nothing waiting on the user, the coordinator removes the worktrees it created, keeps the deliverable branches, and switches its checkout back to the original branch. Status: a recommended adaptation, not a tested integration.
 - `model-picker`. Picks the agent, model, and effort for each role before a skill dispatches agents, with a Best value / Lowest cost / Highest capability proposal and one question. Other skills and agents, such as Codex, load it as a regular skill. See [Configure agents and models](#configure-agents-and-models).
 - `commit-style`. Atomic commits with [Conventional Commits](https://www.conventionalcommits.org/en/v1.0.0/) messages. The agent reads the repository's own convention first, splits the change into atomic commits, stages by path, verifies, and writes a typed header with a body that explains why. It needs neither Orca nor poteto.
 
@@ -13,9 +13,10 @@ Agent skills for multi-agent work coordinated by Orca, model selection, and atom
 For `orca-poteto`:
 
 - Orca, with its `orchestration` skill installed.
-- poteto-mode (pstack), installed as a skill.
+- poteto-mode (pstack), installed as a skill, for complex units.
+- The `model-picker` skill from this repository.
 
-The coordinator loads the installed orchestration skill. Each worker loads the installed poteto-mode skill through an absolute path in its brief. The coordinator reads acceptance evidence and checks integration between deliverables without repeating the worker's engineering phases. Additional engineering review needs a worker request, a user request, or a concrete integration risk.
+The coordinator loads the installed orchestration skill. Each complex worker loads the installed poteto-mode skill through an absolute path in its brief. The model question appears only for runs with a complex unit or when you name models; other runs use `models.yaml` defaults and report them. The coordinator reads acceptance evidence and checks integration between deliverables without repeating the worker's engineering phases. Additional engineering review needs a worker request, a user request, or a concrete integration risk.
 
 The wrapper leaves both underlying skills and their standalone settings unchanged. Updates to their installed copies apply on the next run.
 
