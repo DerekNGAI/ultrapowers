@@ -10,7 +10,7 @@ The caller supplies:
 - **Proposal units.** The roles or work units that get a per-unit `implementation` proposal, with the goal and acceptance that define task fit.
 - **Review task.** What the review models will check, used as task fit for review suggestions, and how the caller's launch count grows with each selected review model.
 - **Catalog sources.** The runtimes and dispatch routes the execution host can actually launch, and where to read their model and effort catalogs.
-- **Extra items**, optional. Caller choices to ask in the same question, such as code-turtle's review lenses.
+- **Extra items**, optional. Caller choices to ask in the same question, such as a reviewer budget or scope options.
 - **Audit location.** Where to save the dispatch record from [Audit](#6-audit).
 
 ## 1. Load the config

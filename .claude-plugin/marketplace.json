@@ -1,6 +1,6 @@
 {
   "name": "ultrapowers",
-  "description": "Agent skills for code review, Orca coordination, and atomic commits.",
+  "description": "Agent skills for Orca coordination, model selection, and atomic commits.",
   "owner": {
     "name": "DerekNGAI"
   },
@@ -8,7 +8,7 @@
     {
       "name": "ultrapowers",
       "source": "./",
-      "description": "Code review with independent verification, Orca coordination, and atomic commits."
+      "description": "Orca coordination, model selection, and atomic commits."
     }
   ]
 }
