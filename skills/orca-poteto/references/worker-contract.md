@@ -10,7 +10,7 @@ Do not load poteto-mode.
 2. Make the smallest change that meets acceptance within the brief's constraints.
 3. Run the repository's checks for the code you touched, such as its tests, linter, and type checker. Fix the failures your change causes.
 4. Review your own `git diff` against acceptance and constraints, and fix what you find.
-5. Commit per your permissions and [Completion](#completion).
+5. Ship the unit per [Ship](#ship).
 
 You may run read-only helpers in parallel through your native subagent tool, on your `implementation` entry, per [Helpers](#helpers). Do not start reviewer helpers.
 
@@ -73,10 +73,20 @@ Use the resolved choices instead of loading another copy of `models.yaml` or res
 - With `commit: yes`, use the installed `commit-style` skill when available, and poteto's commit rules in a complex unit. With `pr: yes` in a complex unit, poteto's Opening a PR playbook applies. Post the PR URL and finish the unit without babysitting or shipping.
 - If the work needs a permission the brief does not grant, stop at the last allowed step and `ask` the coordinator. The coordinator asks the user.
 
+## Ship
+
+Take each step your `PERMISSIONS` grant, in order, and stop at the first one they do not:
+
+1. **Commit** the deliverable on your assigned branch.
+2. **Push** only that branch with `git push -u origin <branch>`, so the coordinator can delete the local copy after the run.
+3. **Open the PR** against the granted base with `gh pr create --base <base> --head <branch>`, writing the body with the installed `pr` skill when available. Complex units use poteto's Opening a PR playbook.
+
+If the push or PR step fails, for example because there is no push remote or `gh` is not authenticated, keep the commit, report the step as blocked, and finish.
+
 ## Completion
 
 Leave every assigned checkout clean, because the coordinator removes a clean worktree when the run ends and keeps a dirty one. With `commit: yes`, commit the deliverable and delete the scratch files you created. With `commit: no`, the uncommitted diff is the deliverable: leave it in place and say so in the report.
 
-Report completion once with `worker_done`. Write your full reply to a file outside every checkout and pass it as `--report-path`.
+Report completion once with `worker_done`. Write your full reply to the brief's `REPORT` path, outside every checkout, and pass it as `--report-path`.
 
-Include the actual Git root, branch, head SHA, and `git status --porcelain` output for every assigned checkout, PR URL if any, verification commands and results, verdict, deviations, review evidence, and remaining blockers. Report the requested and effective agent, model, and effort, including inherited fields or unavailable status. In a complex unit, list the reviewer helpers used against `REVIEW_BUDGET` with each one's model, and any helper the coordinator dispatched for you.
+Include the actual Git root, branch, pushed head SHA, and `git status --porcelain` output for every assigned checkout, PR URL if any, verification commands and results, verdict, deviations, review evidence, and remaining blockers. Report the requested and effective agent, model, and effort, including inherited fields or unavailable status. In a complex unit, list the reviewer helpers used against `REVIEW_BUDGET` with each one's model, and any helper the coordinator dispatched for you.

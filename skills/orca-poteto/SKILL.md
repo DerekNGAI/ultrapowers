@@ -1,11 +1,11 @@
 ---
 name: orca-poteto
-description: Run every implementation task through Orca. Size each unit, do trivial units directly, give standard units to plain Orca workers and complex units to poteto-mode workers, and run independent units in parallel. Use whenever asked to implement, build, fix, refactor, or change code, including multi-unit or parallel work, and for /orca-poteto.
+description: Run every implementation task through Orca. Size each unit, do trivial units directly, give standard units to plain Orca workers and complex units to poteto-mode workers, run independent units in parallel, ship each unit as a pull request, then clean up local workspaces. Use whenever asked to implement, build, fix, refactor, or change code, including multi-unit or parallel work, and for /orca-poteto.
 ---
 
 # Orca + poteto
 
-Every implementation task runs through this skill. This session is the **coordinator**: it splits the request into units, picks a tier for each, dispatches them, accepts the results, and cleans up. Poteto-mode runs only inside complex units. These rules apply only to this run and its workers. Leave the installed `orchestration`, `poteto-mode`, and `model-picker` skills and their standalone settings unchanged.
+Every implementation task runs through this skill. This session is the **coordinator**: it splits the request into units, picks a tier for each, dispatches them, accepts the results, ships each unit as a pull request, and cleans up. Poteto-mode runs only inside complex units. These rules apply only to this run and its workers. Leave the installed `orchestration`, `poteto-mode`, and `model-picker` skills and their standalone settings unchanged.
 
 - **Coordinator.** Load the installed `orchestration` skill, resolve its executable, then run `ORCA skills get orchestration`. Follow that version-matched guide and this skill. When a run has a complex unit, locate the installed `poteto-mode/SKILL.md` without loading its contents or routed skills into the coordinator session.
 - **Workers.** Start separate sessions with bounded task briefs and the needed file pointers. Pass the [worker contract](references/worker-contract.md) and, for complex units, the absolute poteto skill path in the brief instead of the coordinator's full transcript or this guide.
@@ -114,29 +114,44 @@ The coordinator does a trivial unit itself and never edits the user's checkout:
 1. Create a worktree with `ORCA worktree create --name <unit> --repo <exact-repo-selector> --base-branch <baseline branch> --json`, without `--agent`. Record it from the receipt like a worker's worktree.
 2. Verify the worktree's Git root and branch, then edit only there, using absolute paths or `git -C <path>`.
 3. Run the repository's checks for the change and fix what fails.
-4. Commit per the user's authorization, as a worker would under the [worker contract](references/worker-contract.md#permissions).
+4. Ship it per [Ship](#ship).
 
 If the change turns out to need a design choice or more files, re-tier it as `standard` or `complex` and hand the worktree to a worker.
 
+## Ship
+
+Every unit ends as a pull request, trivial units included:
+
+1. Commit the change on the unit's branch, using the installed `commit-style` skill when available.
+2. Push only that branch with `git push -u origin <branch>`. Never force-push.
+3. Open a PR against the unit's base with `gh pr create --base <base> --head <branch>`, writing the body with the installed `pr` skill when available. Complex units follow poteto's Opening a PR playbook instead.
+4. Record the PR URL and the pushed head SHA. Do not merge, enable auto-merge, or wait for CI or review bots.
+
+A unit's base is the branch the user's checkout was on at the [baseline](#baseline), a dependency's branch per [Parallel units](#parallel-units), or the base the request names.
+
+**Authorization.** Asking for implementation through this skill authorizes, for each unit, a commit, a push of that unit's own branch, and a PR against its base. It never authorizes merge. Narrow it when the request says so: "no PR", "don't push", or "local only" means commit only, and "don't commit" means leave the change uncommitted.
+
+If the repository has no push remote or `gh` cannot open the PR, stop after the commit and report that step as blocked. Cleanup then keeps that unit's branch.
+
 ## Coordinator steps
 
-1. Load orchestration. Record the Cleanup [baseline](#baseline).
+1. Load orchestration. Record the Cleanup [baseline](#baseline), including the run scratch directory.
 2. Split the request into units and tier each per [Routing](#routing). For each unit, set its goal, constraints, repository ownership, observable acceptance, role, and authorized permissions. Post the routing lines.
 3. Settle and resolve the run's models through the model picker per [Model configuration](#model-configuration). Resolve the absolute paths to the worker contract and, for complex units, poteto.
 4. Write each brief per [Worker brief](#worker-brief). Start every independent worker at once per Orca's supervised loop, applying Workspace isolation and verifying the resulting placement. Do trivial units meanwhile.
-5. Before accepting a settled unit, inspect its relevant diff and verification evidence against its acceptance criteria. If evidence is missing or a criterion fails, return that specific gap to the responsible worker. Use the review dispatch rules above for additional review.
+5. Before accepting a settled unit, inspect its relevant diff and verification evidence against its acceptance criteria, and check that its PR exists with the reported head SHA, unless the request narrowed the [Ship](#ship) authorization. If evidence is missing or a criterion fails, return that specific gap to the responsible worker. Use the review dispatch rules above for additional review.
 6. Check whether the run is [quiescent](#quiescent). If it is, run the Cleanup steps without asking. If it is not, keep every workspace.
-7. Report each unit's tier, outcome, evidence, and blockers to the user, the models used, then the cleanup result: each worktree removed, each one kept with its reason, each deliverable's branch, head SHA, and PR URL, and each checkout's restored branch. For a run that is not quiescent, name what it is waiting on. Finish when the requested deliverables meet acceptance and Cleanup has run.
+7. Report each unit's tier, outcome, evidence, and blockers to the user, the models used, then the cleanup result: each unit's PR URL, branch, and head SHA, each worktree and local branch removed, each one kept with its reason, each checkout's restored branch, and whether the scratch directory was deleted. For a run that is not quiescent, name what it is waiting on. Finish when the requested deliverables meet acceptance and Cleanup has run.
 
 ## Cleanup
 
-Cleanup returns the user's Orca to its baseline and keeps the deliverables. It is automatic: it needs no confirmation once the run is quiescent, and it waits until then.
+Cleanup returns the user's machine and Orca to their baseline. The deliverables live on as pull requests and their remote branches. It is automatic: it needs no confirmation once the run is quiescent, and it waits until then.
 
 ### Baseline
 
-Before the first dispatch, record the session's working directory and, for every repository in scope, the coordinator checkout's Git root, its branch or detached SHA, and its `git status --porcelain`.
+Before the first dispatch, record the session's working directory and, for every repository in scope, the coordinator checkout's Git root, its branch or detached SHA, and its `git status --porcelain`. Create one run scratch directory outside every checkout with `mktemp -d` and record its path. Write every brief, worker report, and other temporary file of the run there.
 
-As the run proceeds, record every worktree, branch, and worker it creates from the start receipts: exact selector, path, branch, base, Dispatch ID, environment, and whether setup ran. Cleanup touches only these recorded resources. A reused worktree, a pre-existing branch, and anything the user created stay as they are.
+As the run proceeds, record every worktree, branch, worker, and terminal it creates from the receipts: exact selector, path, branch, base, Dispatch ID, terminal handle, environment, whether setup ran, and the pushed head SHA and PR URL. Cleanup touches only these recorded resources. A reused worktree, a pre-existing branch, and anything the user created stay as they are.
 
 ### Quiescent
 
@@ -147,16 +162,24 @@ The run is quiescent when all of these hold:
 - `ORCA orchestration worker-list --run <run_id> --include-remote` shows no failed, unknown, or abandoned worker. Those follow Orca's recovery guide.
 - The user has not asked to keep the workspaces.
 
-An unmerged branch or an open PR is a deliverable. It survives cleanup, and the run is quiescent with it open. Check again after each user reply that settles a pending item.
+An open PR is a deliverable. Its remote branch survives cleanup, and the run is quiescent with it open. Check again after each user reply that settles a pending item.
 
 ### Steps
 
 1. Return the session to the baseline working directory.
-2. Release each recorded worker with `ORCA orchestration worker-release --dispatch <dispatch_id>`. Orca keeps a new-worktree worker open after it finishes, so release it explicitly. A worker the user asked to keep or took over stays open, and so does its worktree.
-3. Decide which recorded worktrees are removable. A worktree is removable when `git -C <path> status --porcelain` is empty, its HEAD is on its recorded branch, and that branch's head SHA is recorded. A dirty worktree holds work that exists nowhere else, such as a `commit: no` deliverable: keep it. For a worktree on a host the coordinator cannot inspect, use the worker's reported status.
-4. Remove each removable worktree with `ORCA worktree rm --worktree <exact selector> --json`, using the start receipt's selector and environment. Add `--run-hooks` when setup ran in it, so the repository's archive hook tears down what setup created. Add `--delete-branch` only when `git rev-list --count <base>..<branch>` is 0. When Orca refuses a removal, keep that worktree and report the refusal. `--force` and `--allow-failed-archive-hook` discard work or skip teardown, so cleanup never passes them.
-5. Verify the result. `ORCA worktree list --json` no longer lists the removed worktrees, and every deliverable branch still resolves to its recorded head SHA. If a host deleted one, restore it with `git branch <branch> <sha>`.
-6. Restore each coordinator checkout whose branch differs from the baseline with `git switch <branch>`, or `git switch --detach <sha>`. Switch only when its `git status --porcelain` matches the baseline. Otherwise leave it and report the difference; the user decides what happens to uncommitted work.
+2. Release each recorded worker with `ORCA orchestration worker-release --dispatch <dispatch_id>`. Orca keeps a new-worktree worker open after it finishes, so release it explicitly; repeating a release Orca already made is harmless. A worker the user asked to keep or took over stays open, and so does its worktree.
+3. Close each recorded terminal outside a removable worktree with `ORCA terminal close --terminal <handle> --json`. Never close a terminal the run did not create or the user took over.
+4. Decide which recorded worktrees are removable. A worktree is removable when `git -C <path> status --porcelain` is empty, its HEAD is on its recorded branch, and that branch's head SHA is recorded. A dirty worktree holds work that exists nowhere else, such as a `commit: no` deliverable: keep it. For a worktree on a host the coordinator cannot inspect, use the worker's reported status.
+5. For each removable worktree, stop its remaining terminals with `ORCA terminal close --worktree <exact selector> --all --json`, then remove it with `ORCA worktree rm --worktree <exact selector> --json`, using the receipt's selector and environment. Add `--run-hooks` when setup ran in it, so the repository's archive hook tears down what setup created. When Orca refuses a removal, keep that worktree and report the refusal. `--force` and `--allow-failed-archive-hook` discard work or skip teardown, so cleanup never passes them.
+6. Delete the local branch of each removed worktree when its commits exist elsewhere, running `git branch -d <branch>` from a remaining checkout of that repository:
+   - **Pushed:** the branch's upstream is `origin/<branch>`, and `git ls-remote origin refs/heads/<branch>` returns its recorded head SHA. Git accepts `-d` because the branch matches its upstream.
+   - **Empty:** `git rev-list --count <base>..<branch>` is 0.
+   - Otherwise keep the branch. A commit-only unit or a blocked push makes the local branch the deliverable.
+
+   If Git refuses, keep the branch and report it. Never use `git branch -D`.
+7. Verify the result. `ORCA worktree list --json` no longer lists the removed worktrees, every PR branch on `origin` still resolves to its recorded head SHA, and every kept local branch resolves to its recorded head SHA. If a host deleted a kept branch, restore it with `git branch <branch> <sha>`.
+8. Restore each coordinator checkout whose branch differs from the baseline with `git switch <branch>`, or `git switch --detach <sha>`. Switch only when its `git status --porcelain` matches the baseline. Otherwise leave it and report the difference; the user decides what happens to uncommitted work.
+9. Read what the final report needs from the run scratch directory, then delete it with `rm -rf <recorded path>`. Keep it instead, and name its path in the report, when a unit is blocked or a worktree was kept.
 
 The Run's coordination state stays in place. `orchestration reset` belongs to the user.
 
@@ -182,17 +205,18 @@ WORKSPACES   For each repository: exact selector, writable or read-only scope,
              Verify the actual Git root and branch before the first write.
 LAUNCH       Selected runtime, configured model name, resolved provider ID, effort,
              inherited fields, resolution evidence, and supported launch route.
-PERMISSIONS
+PERMISSIONS  The Ship authorization, narrowed by the request:
   commit:    yes | no
-  push:      no | yes, to <branch> only
-  pr:        no | yes, against base <branch>
+  push:      yes, to <branch> only | no
+  pr:        yes, against base <base> | no
   merge:     no
-REPORT       worker_done summary, plus --report-path to the worker's full reply:
-             actual repository roots, branches, head SHAs, PR URL, commands run,
+REPORT       worker_done summary, plus --report-path <run scratch directory>/<unit>.md
+             with the worker's full reply:
+             actual repository roots, branches, pushed head SHAs, PR URL, commands run,
              `git status --porcelain` per checkout,
              verdict, deviations,
              requested and effective agent/model/effort, inheritance, or unavailable status,
              reviewer helpers used against REVIEW_BUDGET with each one's model
 ```
 
-Grant permissions under the [worker contract](references/worker-contract.md#permissions). Carry only the user's existing authorization into the brief. Resolve an unavailable skill or contract path before dispatch.
+Grant permissions under the [worker contract](references/worker-contract.md#permissions). Carry only the [Ship](#ship) authorization, narrowed by the request, into the brief. Resolve an unavailable skill or contract path before dispatch.
