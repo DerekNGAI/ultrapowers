@@ -17,7 +17,7 @@ For `orca-poteto`:
 - The `model-picker` skill from this repository.
 - A push remote and an authenticated GitHub CLI (`gh`), to open each unit's PR.
 
-The coordinator loads the installed orchestration skill. Each complex worker loads the installed poteto-mode skill through an absolute path in its brief. The model question appears only for runs with a complex unit or when you name models; other runs use `models.yaml` defaults and report them. The coordinator reads acceptance evidence and checks integration between deliverables without repeating the worker's engineering phases. Additional engineering review needs a worker request, a user request, or a concrete integration risk.
+The coordinator loads the installed orchestration skill. Each complex worker loads the installed poteto-mode skill through an absolute path in its brief. Before dispatching any worker, the coordinator stops and asks the model question; say "use the defaults" in your request to skip it. Runs with only trivial units ask nothing. The coordinator reads acceptance evidence and checks integration between deliverables without repeating the worker's engineering phases. Additional engineering review needs a worker request, a user request, or a concrete integration risk.
 
 The wrapper leaves both underlying skills and their standalone settings unchanged. Updates to their installed copies apply on the next run.
 

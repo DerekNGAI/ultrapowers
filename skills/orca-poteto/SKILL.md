@@ -31,7 +31,7 @@ A unit is `complex` when any of these applies:
 
 The user's words override these rules in both directions, such as "no poteto", "use poteto", or "do it yourself".
 
-Before the first dispatch, post one line per unit: `<unit>: <tier>, <reason>`, and name the units that run in parallel. Continue without waiting for approval; the user can redirect at any time.
+Before the first dispatch, post one line per unit: `<unit>: <tier>, <reason>`, and name the units that run in parallel. Tiers need no approval, but when any unit is `standard` or `complex`, ask the model question per [Model configuration](#model-configuration) and wait for the answer before dispatching. The user can redirect at any time.
 
 ### Parallel units
 
@@ -59,7 +59,7 @@ When this skill and an underlying skill disagree on a concern, the owner in this
 
 Load the installed `model-picker` skill (`ultrapowers:model-picker` in Claude Code). It owns the config file, precedence, the single question, name resolution, and the dispatch audit.
 
-Ask the picker's question only when the run has a `complex` unit or the user names a model, effort, or budget. Otherwise treat the run as "use the defaults": apply `models.yaml` through the role map without asking, and report the selections in the final report. Trivial units run in the coordinator's own session and need no selection.
+Before dispatching any `standard` or `complex` unit, stop, ask the picker's question, and wait for the answer. Skip it only when the user's request already settles every choice or says to use the defaults. A run with only trivial units asks nothing, since trivial units run in the coordinator's own session and need no selection.
 
 Supply the picker this caller contract:
 
