@@ -54,7 +54,7 @@ Ask the user once, in a single message, before any dispatch:
 3. The review budget, with the file's value or the caller's count as the default.
 4. The caller's extra items.
 
-Skip an item the request already settles; an implementation model named in the request applies to every unit it covers and replaces their proposal. Skip the whole message when the request settles every item or says to use the defaults; then apply the file's entries through the role map and the caller's defaults for its extra items. Use the host's question tool when it has one; otherwise ask in chat and wait for the reply.
+Skip an item the request already settles; an implementation model named in the request applies to every unit it covers and replaces their proposal. Skip the whole message when the request settles every item or says to use the defaults; then apply the file's entries through the role map and the caller's defaults for its extra items. Use the host's question tool when it has one and its rules allow it for required input. Otherwise, including a host that limits required input to one plain-text question, show the full choice table and review-model list as a report, then end with one plain-text question asking for the picks per unit and review models, or `defaults`, and wait for the reply. Every host shows the shortlist before dispatch; a shortened question still carries the full report above it.
 
 Apply the answers and any other explicit overrides field by field over the file. Leave the file unchanged unless the user asks to save the choices. Leave global agent settings and project files unchanged. When an implementation choice uses the same model as a `review` entry, note the reduced model diversity without changing the review choices.
 
