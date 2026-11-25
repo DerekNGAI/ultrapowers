@@ -1,6 +1,6 @@
 ---
-name: orca-poteto
-description: Run implementation work through Orca workers. Size the task and pick models, dispatch a plain worker for simple units and a poteto-mode worker for complex ones, ship each unit as a pull request, then clean up. Use whenever asked to implement, build, fix, refactor, or change code, and for /orca-poteto.
+name: ultrapowers-orca-poteto
+description: Run implementation work through Orca workers. Size the task and pick models, dispatch a plain worker for simple units and a poteto-mode worker for complex ones, ship each unit as a pull request, then clean up. Use whenever asked to implement, build, fix, refactor, or change code, and for /ultrapowers-orca-poteto.
 ---
 
 # Orca + poteto
@@ -34,7 +34,7 @@ The user's words override the tier: "use poteto" makes it complex, "no poteto" m
 
 **Order.** Run units one at a time, in the order given. Run units in parallel only when the user or the plan they gave explicitly asks for parallel work. A unit that needs another unit's result starts after it, on that unit's branch.
 
-**Model question.** Load the installed `model-picker` skill (`ultrapowers:model-picker` in Claude Code) and give it:
+**Model question.** Load the installed `ultrapowers-model-picker` skill (`ultrapowers:ultrapowers-model-picker` in Claude Code) and give it:
 
 - **Units**: every unit, for its `implementation` pick (the worker and its non-review helpers).
 - **Review task**, only when a unit is complex: the review models fill poteto's reviewer and panel roles for complex units.

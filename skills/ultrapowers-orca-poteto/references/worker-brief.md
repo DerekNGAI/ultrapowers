@@ -20,7 +20,7 @@ MODEL       You run on <agent> / <model> / <effort>. Any helper you start uses <
             effort as options of your subagent tool. If one is rejected, stop and ask; never
             substitute another model.
 
-SHIP        Commit on <branch> (commit-style skill if installed). Push only <branch>.
+SHIP        Commit on <branch> (ultrapowers-commit-style skill if installed). Push only <branch>.
             Open a PR against <base> (pr skill if installed). Never merge, enable auto-merge,
             or force-push.
             <or the narrower rule the user gave: "commit only" / "do not commit">
@@ -50,7 +50,7 @@ WORKFLOW    Read <absolute path to poteto-mode/SKILL.md> in full and follow it: 
 PSTACK MODELS
             These are your pstack-models.mdc lines for this run. They override poteto's role
             defaults and any pstack-models.mdc file.
-            <the unit's poteto role lines from model-picker>
+            <the unit's poteto role lines from ultrapowers-model-picker>
 
 SUBAGENTS   This task asks you to use subagents. Start poteto's helpers wherever its playbooks
             call for them.
