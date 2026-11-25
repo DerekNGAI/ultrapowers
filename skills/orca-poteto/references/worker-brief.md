@@ -48,11 +48,15 @@ WORKFLOW    Read <absolute path to poteto-mode/SKILL.md> in full. Follow its per
 
 REVIEWERS   <review model / effort, one per line>
             These replace poteto's reviewer models (pstack-models.mdc lines and built-in slugs)
-            for interrogate adversaries, review panels, arena cross-judges, and fix rechecks.
-            Give each panel seat a different model from this list while models remain.
+            for every reviewer, interrogate adversary, arena cross-judge, and fix recheck.
             All other poteto roles, including arena runners, use the MODEL line.
 
-HELPERS     This task asks you to use subagents. Start poteto's helpers, with at most
-            <review_budget> reviewer helpers in total, fix rechecks included. When the budget is
-            short, merge review axes into one reviewer and report the cut as a deviation.
+REVIEW      Required, even when the change looks clear. This task asks you to use subagents.
+            After implementing and verifying, and before you ship:
+            1. Start independent read-only reviewer helpers on your diff, one per REVIEWERS
+               model first, each with the goal, ACCEPTANCE, and the diff.
+            2. Fix the findings you accept and note why you rejected the rest.
+            3. Recheck the fixes with a reviewer.
+            Use at most <review_budget> reviewer helpers in total, rechecks included. When the
+            budget runs out, check the rest yourself and report the missing review as a deviation.
 ```
