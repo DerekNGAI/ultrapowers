@@ -3,14 +3,42 @@
   "shared_inputs": {
     "run_date": "2026-11-18",
     "ranking_source": "https://ranking.example.test/coding",
-    "default": {"agent": "codex", "model": "fixture-premium", "effort": "high"},
-    "review": [{"agent": "codex", "model": "fixture-review", "effort": "high"}],
-    "review_budget": null,
     "catalog": [
-      {"agent": "codex", "model": "fixture-standard", "efforts": ["medium", "high"], "default_effort": "high"},
-      {"agent": "codex", "model": "fixture-premium", "efforts": ["medium", "high", "max"], "default_effort": "high"},
-      {"agent": "codex", "model": "fixture-tiny", "efforts": ["medium"], "default_effort": "medium"},
-      {"agent": "codex", "model": "fixture-review", "efforts": ["high"], "default_effort": "high"}
+      {
+        "agent": "codex",
+        "model": "fixture-standard",
+        "efforts": [
+          "medium",
+          "high"
+        ],
+        "default_effort": "high"
+      },
+      {
+        "agent": "codex",
+        "model": "fixture-premium",
+        "efforts": [
+          "medium",
+          "high",
+          "max"
+        ],
+        "default_effort": "high"
+      },
+      {
+        "agent": "codex",
+        "model": "fixture-tiny",
+        "efforts": [
+          "medium"
+        ],
+        "default_effort": "medium"
+      },
+      {
+        "agent": "codex",
+        "model": "fixture-review",
+        "efforts": [
+          "high"
+        ],
+        "default_effort": "high"
+      }
     ],
     "capability": {
       "source": "https://ranking.example.test/coding",
@@ -19,9 +47,21 @@
       "direction": "higher is better",
       "same_conditions": true,
       "scores": [
-        {"model": "fixture-standard", "effort": "high", "score": 92},
-        {"model": "fixture-premium", "effort": "high", "score": 96},
-        {"model": "fixture-tiny", "effort": "medium", "score": 70}
+        {
+          "model": "fixture-standard",
+          "effort": "high",
+          "score": 92
+        },
+        {
+          "model": "fixture-premium",
+          "effort": "high",
+          "score": 96
+        },
+        {
+          "model": "fixture-tiny",
+          "effort": "medium",
+          "score": 70
+        }
       ]
     },
     "pricing": {
@@ -31,9 +71,21 @@
       "unit": "per million tokens",
       "billing": "uncached synchronous public API list prices, same context tier; user's actual billing unknown",
       "rates": [
-        {"model": "fixture-standard", "input": 2, "output": 8},
-        {"model": "fixture-premium", "input": 10, "output": 40},
-        {"model": "fixture-tiny", "input": 0.5, "output": 2}
+        {
+          "model": "fixture-standard",
+          "input": 2,
+          "output": 8
+        },
+        {
+          "model": "fixture-premium",
+          "input": 10,
+          "output": 40
+        },
+        {
+          "model": "fixture-tiny",
+          "input": 0.5,
+          "output": 2
+        }
       ]
     }
   },
@@ -57,9 +109,21 @@
         "request": "Suggest models for the same caller migration; input/output token volume cannot yet be estimated.",
         "fit_evidence": "Standard/high and premium/high passed the identical migration checks; tiny failed.",
         "replace_pricing_rates": [
-          {"model": "fixture-standard", "input": 1, "output": 30},
-          {"model": "fixture-premium", "input": 8, "output": 5},
-          {"model": "fixture-tiny", "input": 0.5, "output": 2}
+          {
+            "model": "fixture-standard",
+            "input": 1,
+            "output": 30
+          },
+          {
+            "model": "fixture-premium",
+            "input": 8,
+            "output": 5
+          },
+          {
+            "model": "fixture-tiny",
+            "input": 0.5,
+            "output": 2
+          }
         ]
       },
       "checks": [
@@ -76,7 +140,7 @@
       },
       "checks": [
         "Mark prices unknown and avoid Best value and Lowest cost labels.",
-        "Offer the available premium/high default and supported capability alternatives without inventing rates or comparing unknown cost."
+        "Offer standard/high and premium/high as adequate alternatives without inventing rates, comparing unknown cost, or recommending one unconditionally."
       ]
     },
     {
@@ -86,30 +150,29 @@
         "capability_unavailable": "Ranking cannot be retrieved and cache has no scores; pricing remains available."
       },
       "checks": [
-        "Offer the verified premium/high configured default as fallback and explain missing capability evidence.",
+        "List the launchable candidates unranked with their prices, explain the missing capability evidence, and recommend none.",
         "Do not call price or family evidence of quality, or claim a measured value winner."
       ]
     },
     {
       "name": "explicit-choice",
       "input": {
-        "request": "Use fixture-standard at medium effort for this unit, keep the configured reviewers and budget, and proceed.",
+        "request": "Use fixture-standard at medium effort for this unit and fixture-review at high for review, with a budget of 2, and proceed.",
         "acceptance": "Run existing tests."
       },
       "checks": [
         "Honor standard/medium without asking the user to choose again or increasing effort.",
-        "Preserve review settings and pass the explicit row to caller resolution; do not claim the high-effort score measures medium."
+        "Pass the explicit implementation and review rows to caller resolution without reopening selection; do not claim the high-effort score measures medium."
       ]
     },
     {
-      "name": "defaults-disabled-ranking",
+      "name": "recommended-without-ranking",
       "input": {
-        "request": "Use defaults for implementation, reviewers, and review budget.",
+        "request": "Use your recommendations.",
         "ranking_source": null
       },
       "checks": [
-        "Use the verified premium/high configured default without reopening selection or fetching rankings.",
-        "Preserve reviewer choices."
+        "With no capability evidence there is no recommendation to apply: list the launchable candidates unranked and ask the user to pick, rather than choosing one."
       ]
     },
     {
@@ -118,9 +181,21 @@
         "request": "Suggest models for the same caller migration. Estimate using 100000 input and 10000 output tokens, excluding unknown extra reasoning tokens.",
         "fit_evidence": "Standard/high and premium/high passed the same checks; tiny failed.",
         "replace_pricing_rates": [
-          {"model": "fixture-standard", "input": 1, "output": 30},
-          {"model": "fixture-premium", "input": 8, "output": 5},
-          {"model": "fixture-tiny", "input": 0.5, "output": 2}
+          {
+            "model": "fixture-standard",
+            "input": 1,
+            "output": 30
+          },
+          {
+            "model": "fixture-premium",
+            "input": 8,
+            "output": 5
+          },
+          {
+            "model": "fixture-tiny",
+            "input": 0.5,
+            "output": 2
+          }
         ]
       },
       "checks": [
