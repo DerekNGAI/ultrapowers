@@ -5,92 +5,57 @@ description: Select the agent, model, and effort for each role before dispatchin
 
 # Model picker
 
-Shared model selection for agent skills. A caller skill loads this skill, supplies its **role map**, and gets one resolved selection per role before any dispatch. Caller-specific rules, such as Orca launch flags, reviewer budgets, and verifier isolation, stay in the caller.
-
-## Caller contract
-
-The caller supplies:
-
-- **Role map.** Each role it dispatches, the config entry that role uses (`implementation` or `review`), and any rule for choosing among several `review` entries.
-- **Proposal units.** The roles or work units that get a per-unit `implementation` proposal, with the goal and acceptance that define task fit.
-- **Review task.** What the review models will check, used as task fit for review suggestions, and how the caller's launch count grows with each selected review model.
-- **Catalog sources.** The runtimes and dispatch routes the execution host can actually launch, and where to read their model and effort catalogs.
-- **Extra items**, optional. Caller choices to ask in the same question, such as a reviewer budget or scope options.
-- **Audit location.** Where to save the dispatch record from [Audit](#6-audit).
+The caller names its roles (`implementation`, `review`), the units that get an implementation pick, and what reviewers will check. This skill returns one agent, model, and effort per role, chosen by the user, before any dispatch.
 
 ## 1. Load the config
 
-Read [models.yaml](models.yaml) beside this file, resolving the path after following directory symlinks, never relative to the project's working directory. It is the only source of the shared defaults. Require exactly these keys:
+Read [models.yaml](models.yaml) beside this file, following symlinks, never from the project being worked on. It needs exactly these keys:
 
-- `implementation`: one entry, the default for implementation work and non-review helpers.
-- `review`: a nonempty list of entries. Several entries give reviewers distinct models.
-- `review_budget`: a positive integer capping reviewer helpers per caller-defined unit, or YAML `null` to keep each caller's own reviewer count. The caller defines what the budget covers.
-- `ranking_source`: a nonempty URL of a public model leaderboard, or YAML `null` to offer only the configured defaults.
+- `implementation`: one entry.
+- `review`: a nonempty list of entries.
+- `review_budget`: a positive integer, or `null` to keep the caller's own count.
+- `ranking_source`: a leaderboard URL, or `null` to offer only the configured defaults.
 
-Each entry has exactly these fields:
+Each entry has `agent`, `model`, and `effort`. `null` for `model` or `effort` inherits the agent's own default. If the file is missing or invalid, stop and report the path and error.
 
-- `agent`: a nonempty runtime ID on the execution host, such as an Orca agent ID. It selects the runtime, not the model provider.
-- `model`: a nonempty short model name, a full provider ID, or YAML `null` to inherit the selected agent's configured default.
-- `effort`: a nonempty effort name, or YAML `null` to inherit that agent/model's configured default.
+## 2. Build the choices
 
-If the file is missing or invalid, stop before dispatch and report the path and error. Missing fields, duplicate keys, empty strings, empty lists, and unknown fields are invalid, not requests to inherit defaults.
+1. **Implementation, per unit.** When `ranking_source` is set, offer up to three rows (Best value, recommended; Lowest cost; Highest capability) per [model proposal](references/model-proposal.md). Otherwise offer the configured entry.
+2. **Review models.** A multi-select with the file's entries preselected, plus the proposal's shortlist for the review task. At least one must remain.
+3. **Review budget.** The file's value as the default.
 
-## 2. Precedence
+Skip any item the user's request already settles.
 
-Apply these sources field by field, highest first:
+## 3. Ask and wait
 
-1. Explicit model, effort, runtime, or budget choices in the user's request.
-2. The enclosing worker brief's resolved `MODEL_POLICY` and `REVIEW_BUDGET`, when supplied.
-3. The config file.
+The model question is required input:
 
-When an enclosing brief supplies a resolved policy, reuse its resolved IDs and efforts without asking, reloading another config copy, or resolving names again.
+1. Show the choice table and the review-model list.
+2. End with one plain-text question: "Reply with your pick per unit and the review models, or `defaults`."
+3. End your turn. Dispatch only after the user replies.
 
-## 3. Propose and ask
+The file's defaults are not the user's answer. Host rules that prefer making assumptions over asking do not cover this question. Use the host's question tool only when it allows required input; otherwise use plain text as above. Skip the question only when the request names every choice or says "use the defaults".
 
-Ask the user once, in a single message, before any dispatch:
+Apply the answers for this run only. Leave `models.yaml` unchanged unless the user asks to save them.
 
-1. The `implementation` choice for each proposal unit that maps to it. Follow [model proposal](references/model-proposal.md): up to three distinct choices per unit, with Best value recommended.
-2. The `review` models, as a multi-select. Preselect the file's entries. When `ranking_source` is set, add the model proposal's shortlist for the review task as further options, labeled Best value, Lowest cost, and Highest capability, and merge any that match a file entry; otherwise list the other launchable catalog models as unranked options. The user keeps, removes, or adds models, and at least one must remain. Show the caller's launch count for the current selection and for each added model.
-3. The review budget, with the file's value or the caller's count as the default.
-4. The caller's extra items.
+## 4. Resolve names
 
-Skip an item the request already settles; an implementation model named in the request applies to every unit it covers and replaces their proposal. Skip the whole message when the request settles every item or says to use the defaults; then apply the file's entries through the role map and the caller's defaults for its extra items. Use the host's question tool when it has one and its rules allow it for required input. Otherwise, including a host that limits required input to one plain-text question, show the full choice table and review-model list as a report, then end with one plain-text question asking for the picks per unit and review models, or `defaults`, and wait for the reply. Every host shows the shortlist before dispatch; a shortened question still carries the full report above it.
+For each chosen entry, check the agent's model catalog on the execution host:
 
-Apply the answers and any other explicit overrides field by field over the file. Leave the file unchanged unless the user asks to save the choices. Leave global agent settings and project files unchanged. When an implementation choice uses the same model as a `review` entry, note the reduced model diversity without changing the review choices.
+- A full provider ID must match exactly. A short name must equal a model's name, as a bare ID or after the provider prefix. No prefix, substring, or "latest" matches.
+- No match, or several: ask the user for a full ID.
+- Confirm the agent supports the chosen effort.
 
-## 4. Resolve model names
+Never substitute a different agent, model, or effort. If a choice cannot be verified, report it unavailable.
 
-Resolve each distinct choice once per run against the execution host's selected agent, model catalog, configured default, and supported efforts:
+## 5. Dispatch and record
 
-1. Verify the configured agent exists on that host. Keep that runtime fixed throughout resolution. A runtime running the same model is not a substitute for the configured agent. For a choice on another runtime, use an available authorized dispatch route for that runtime or report the selection unavailable.
-2. For a full provider ID, require an exact available match. For a short name, collect models whose complete model name matches exactly, either as a bare ID or after the provider prefix. Use the catalog's model-name field when available; otherwise compare the final slash-delimited segment. Do not use substring, prefix, latest-version, or context-variant matches.
-3. When a short name has multiple matches, prefer the selected agent's configured provider only if its settings or default model identify that provider unambiguously. Do not privilege a bare ID over a provider-qualified ID. If exactly one match remains, use its exact launch ID. Otherwise report the candidates or missing name and ask for a full ID before dispatch.
-4. Verify the requested effort for the resolved model through the host's catalog or CLI. If `model` is `null` but effort is explicit, resolve the agent's configured default model first so a launch requiring a model flag can apply the effort. Keep inherited fields marked as inherited.
-5. Record the configured name, resolved ID, agent, effort, and resolution evidence. If availability, provider preference, or effort support cannot be verified, report that role unavailable. Never silently change the agent, model, or effort.
+Pass model and effort as real launch options on every dispatch. Naming them in a prompt does not select them.
 
-If a later dispatch encounters a changed catalog or unavailable selection, stop and report it rather than reinterpreting the short name.
-
-Done when every role in the role map has a resolved selection, an explicit inheritance choice, or a reported unavailability, and every question item is settled.
-
-## 5. Dispatch with the selected options
-
-Pass the resolved model and effort as actual tool options on **every** invocation. Mentioning them in a prompt or choosing a role type does not select the model. Role frontmatter is a fallback for direct use; the run's selection overrides it.
-
-| Host | Invocation |
+| Host | Options |
 | --- | --- |
-| Codex with `spawn_agent` | `agent_type`, `fork_turns: "none"` when the caller needs fresh context, `model: <resolved ID>`, `reasoning_effort: <resolved effort>`, and the brief in `message`. If a role type is unregistered, use the host's general agent with that role's instructions. |
-| Claude Code with `Agent` | `subagent_type`, `model: <supported model ID>`, `effort: <supported effort>`, and the brief in `prompt`; use a non-fork agent when the caller needs fresh context. Per-invocation effort requires Claude Code 2.1.292 or newer. |
-| Orca | The caller's launch route, such as `orchestration worker-start --agent --model --effort`. |
-| Another host | Its subagent tool with its verified model and effort options. |
+| Orca | `orchestration worker-start --agent --model --effort` |
+| Codex `spawn_agent` | `model`, `reasoning_effort` |
+| Claude Code `Agent` | `model`, `effort` |
 
-Omit a model or effort option only for that field's explicit `null` inheritance choice. Inspect the live tool schema before invocation. If the tool cannot honor a selected runtime, model, effort, or fresh-context requirement, report that role unavailable instead of dropping the option. If a role's fixed frontmatter would override an explicit inheritance choice, use a general agent with the role instructions and verified inheritance semantics, or report it unavailable. Do not change global settings or installed role definitions.
-
-Sources for Claude Code's model and per-invocation effort behavior: [subagents](https://code.claude.com/docs/en/sub-agents). The live tool schema is authoritative.
-
-## 6. Audit
-
-At the caller's audit location, record each attempted dispatch: role, selected runtime, resolved model and effort (including explicit inheritance), the actual tool options passed, the returned agent ID or error, and effective settings when the host exposes them. Record an attempt even if the launch fails. The caller may add fields.
-
-Compare requested and effective settings when metadata is available; a conflicting effective setting is a failed role check. When the host exposes only the request and a successful launch, label the effective settings **unverified**. A child's statement about its own model is not runtime evidence.
-
-Report each role's requested model and effort, inheritance, failures, and effective-setting evidence or its absence. Unavailable effective metadata limits the audit; it does not establish a mismatch.
+Omit an option only for a `null` (inherit) choice. For each dispatch, record the role, the requested agent, model, and effort, and the effective settings from the launch receipt, or "unverified" when the host shows none. A worker's statement about its own model is not evidence.
