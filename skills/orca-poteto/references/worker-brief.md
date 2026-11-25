@@ -54,4 +54,14 @@ PSTACK MODELS
 
 SUBAGENTS   This task asks you to use subagents. Start poteto's helpers wherever its playbooks
             call for them.
+            - Entry on your own agent: your native subagent tool, with the model and effort
+              as its options.
+            - Entry on another agent (for example claude: while you run on codex): start it as an
+              Orca helper worker with `orca orchestration worker-start --agent <agent>
+              --model <model> --effort <effort> --parent <your task id> --spec <its brief>`.
+              Read-only helpers use `--worktree path:<your worktree>`; helpers that write get
+              their own new worktree. Wait for its worker_done and use its report as the helper's
+              result. If Orca says it is stuck at a prompt, `ask` the coordinator.
+            Before your own worker_done, release every helper worker you started and remove the
+            worktrees they created.
 ```

@@ -16,7 +16,17 @@ The caller supplies:
 
 ## 1. Find candidates
 
-List every launchable agent, model, and supported effort from the caller's catalog sources. Leave out anything you cannot verify as launchable.
+List every launchable model and supported effort from the caller's catalog sources. Leave out anything you cannot verify as launchable.
+
+Each model runs on its own vendor's agent, even when another agent's catalog also lists it:
+
+| Vendor | Agent |
+| --- | --- |
+| OpenAI (GPT) | `codex` |
+| Anthropic (Claude) | `claude` |
+| xAI (Grok) | `grok` |
+
+A model whose vendor's agent is not installed is not a candidate. For any other vendor, ask the user which agent runs it. When an agent has no model-list command, such as Claude Code, take its vendor's model IDs from the other catalogs and let the launch receipt confirm them.
 
 ## 2. Suggest
 
@@ -66,17 +76,17 @@ For each unit the caller marks for poteto, build its role lines in the format of
 
 ```
 # pstack model configuration for this run. Overrides poteto's role defaults and any pstack-models.mdc.
-# Pass each model as the subagent tool's model option and the effort as its effort option.
+# Each entry is <agent>:<model> @ <effort>.
 # budget: <budget> (<effort>)
-feature, refactoring: <implementation> @ <effort>
-bug-fix: <implementation> @ <effort>
-perf-issue: <implementation> @ <effort>
-hillclimb: <implementation> @ <effort>
-judgment and prose: <implementation> @ <effort>
-swarm workers: <implementation> @ <lower>
-arena runners: <review 1> @ <effort>, <review 2> @ <effort>, ...
-arena cross-judge pool: <review 1> @ <effort>, <review 2> @ <effort>, ...
-interrogate reviewers: <review 1> @ <effort>, <review 2> @ <effort>, ...
+feature, refactoring: <agent>:<implementation> @ <effort>
+bug-fix: <agent>:<implementation> @ <effort>
+perf-issue: <agent>:<implementation> @ <effort>
+hillclimb: <agent>:<implementation> @ <effort>
+judgment and prose: <agent>:<implementation> @ <effort>
+swarm workers: <agent>:<implementation> @ <lower>
+arena runners: <agent>:<review 1> @ <effort>, <agent>:<review 2> @ <effort>, ...
+arena cross-judge pool: <agent>:<review 1> @ <effort>, <agent>:<review 2> @ <effort>, ...
+interrogate reviewers: <agent>:<review 1> @ <effort>, <agent>:<review 2> @ <effort>, ...
 ```
 
-Use resolved model IDs. Poteto starts reviewers as its own helpers, so offer review models only from the implementation agent's catalog. Never write `~/.cursor/rules/pstack-models.mdc`; the lines travel in the caller's brief.
+Use resolved model IDs. The caller decides how an entry on another agent than the worker's is launched. Never write `~/.cursor/rules/pstack-models.mdc`; the lines travel in the caller's brief.

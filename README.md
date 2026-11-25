@@ -23,13 +23,13 @@ The wrapper leaves both underlying skills and their standalone settings unchange
 
 ## Models
 
-`orca-poteto` uses the [`model-picker`](skills/model-picker/SKILL.md) skill, and any other skill or agent can load it the same way. Every run, it lists the models each installed agent can launch, ranks them against [Artificial Analysis](https://artificialanalysis.ai/leaderboards/models) and provider pricing, and asks one question:
+`orca-poteto` uses the [`model-picker`](skills/model-picker/SKILL.md) skill, and any other skill or agent can load it the same way. Every run, it lists the models each installed agent can launch, keeping each model on its own vendor's agent (GPT on Codex, Claude on Claude Code, Grok on Grok Build), ranks them against [Artificial Analysis](https://artificialanalysis.ai/leaderboards/models) and provider pricing, and asks one question:
 
 - **Implementation**, per unit: up to three rows, **Best value** (recommended), **Lowest cost**, and **Highest capability**, with capability evidence, effort, and input/output prices.
 - **Review models**, when a unit is complex: a multi-select with two models from different providers recommended.
 - **Budget**: `large` (xhigh), `medium` (high), or `small` (medium), the effort every role runs at, as in `/setup-pstack`.
 
-For each complex unit, the picks become poteto's role lines: the implementation model fills the code, judgment, and swarm roles, and the review models fill `interrogate reviewers`, `arena runners`, and `arena cross-judge pool`. Poteto runs one reviewer per listed model, so the number of review models you pick sets the review cost. The machine-wide pstack rule file is never written.
+For each complex unit, the picks become poteto's role lines: the implementation model fills the code, judgment, and swarm roles, and the review models fill `interrogate reviewers`, `arena runners`, and `arena cross-judge pool`. Poteto runs one reviewer per listed model, so the number of review models you pick sets the review cost. A reviewer on another agent than the worker's, such as Claude for a Codex worker, runs as an Orca helper worker on that agent. The machine-wide pstack rule file is never written.
 
 Reply with your picks, or `recommended`. Naming models in your request skips the items it settles. Short model names must match exactly; ambiguous names get a follow-up question. Evidence is cached at `~/.cache/ultrapowers/model-ranking.md` for the day; when no ranking is available, the picker lists the launchable models unranked and asks you to choose.
 

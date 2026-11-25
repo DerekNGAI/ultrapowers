@@ -39,7 +39,7 @@ The user's words override the tier: "use poteto" makes it complex, "no poteto" m
 - **Units**: every unit, for its `implementation` pick (the worker and its non-review helpers).
 - **Review task**, only when a unit is complex: the review models fill poteto's reviewer and panel roles for complex units.
 - **Poteto roles**: every complex unit, so the picker builds its role lines for the brief.
-- **Catalog sources**: `ORCA agent installed --json`, and each installed agent's CLI model list (for example `codex debug models`).
+- **Catalog sources**: `ORCA agent installed --json`, and each agent's model list: `codex debug models`, `grok models`. Each model runs on its own vendor's agent: GPT on `codex`, Claude on `claude`, Grok on `grok`.
 
 Post one message: one line per unit, `<unit>: simple|complex, <reason>`, then the picker's question. **End your turn and wait for the reply.**
 
@@ -48,9 +48,9 @@ Post one message: one line per unit, `<unit>: simple|complex, <reason>`, then th
 For each unit:
 
 1. Fill in [the worker brief](references/worker-brief.md) for its tier and save it in the scratch directory.
-2. Start it with `ORCA orchestration worker-start --spec-file <brief> --agent <agent> --model <model> --effort <effort>` and a new worktree for the unit.
+2. Start it with `ORCA orchestration worker-start --spec-file <brief> --agent <agent> --model <model> --effort <effort>` and a new worktree for the unit, where `<agent>` is the implementation model's own agent.
 3. Check the launch receipt: the effective agent, model, and effort must match the picks.
-4. While it runs, answer its `ask` messages. Forward to the user only what needs the user.
+4. While it runs, answer its `ask` messages. Forward to the user only what needs the user, including a helper worker stuck at a prompt.
 
 **Re-tier.** If a simple worker reports that the unit needs a design choice or more files, stop it and start a complex worker on the same worktree.
 
@@ -66,7 +66,7 @@ Each worker ships its unit as a pull request: commit, push its own branch, open 
 
 Run this without asking once every unit is accepted and nothing waits on the user. Touch only what this run created.
 
-1. Release each worker: `ORCA orchestration worker-release --dispatch <id>`.
+1. Release each worker, and any helper worker a report lists as still open: `ORCA orchestration worker-release --dispatch <id>`.
 2. For each worktree this run created: if `git status --porcelain` is empty, remove it with `ORCA worktree rm --worktree <selector> --json`. Keep a dirty one. Never pass `--force`.
 3. Delete each removed worktree's local branch with `git branch -d <branch>` when it is pushed. Keep it otherwise. Never use `-D`.
 4. Switch each checkout back to its baseline branch if its status still matches the baseline.
