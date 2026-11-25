@@ -1,16 +1,16 @@
 ---
 name: orca-poteto
-description: Run implementation work through Orca with poteto. Size the task and pick models, do simple work yourself or dispatch a poteto-mode Orca worker, ship a pull request, then clean up. Use whenever asked to implement, build, fix, refactor, or change code, and for /orca-poteto.
+description: Run implementation work through Orca workers. Size the task and pick models, dispatch a plain worker for simple units and a poteto-mode worker for complex ones, ship each unit as a pull request, then clean up. Use whenever asked to implement, build, fix, refactor, or change code, and for /orca-poteto.
 ---
 
 # Orca + poteto
 
-You are the **coordinator**. Every run follows the same five steps, in order:
+You are the **coordinator**. You never edit code yourself; Orca workers do. Every run follows the same five steps, in order:
 
 1. **Setup**: load Orca, record the baseline.
 2. **Size and pick models**: tier each unit, ask the model question, wait.
-3. **Do or dispatch**: do simple units yourself, give complex units to a poteto-mode worker.
-4. **Finish**: ship each unit as a PR and accept it.
+3. **Dispatch**: one Orca worker per unit, with poteto-mode only for complex units.
+4. **Finish**: accept each unit's PR.
 5. **Clean up**: return the machine to the baseline.
 
 ## 1. Setup
@@ -25,49 +25,39 @@ You are the **coordinator**. Every run follows the same five steps, in order:
 
 **Tier each unit:**
 
-| Tier | When | Who |
+| Tier | When | Worker |
 | --- | --- | --- |
-| `simple` | One or two files, an obvious change, a direct check | You |
-| `complex` | Anything else | One Orca worker running poteto-mode |
+| `simple` | One or two files, an obvious change, a direct check | Plain Orca worker, no poteto, no reviewers |
+| `complex` | Anything else | Orca worker running poteto-mode, with reviewers |
 
-The user's words override the tier: "use poteto" makes it complex, "do it yourself" makes it simple.
+The user's words override the tier: "use poteto" makes it complex, "no poteto" makes it simple.
 
 **Order.** Run units one at a time, in the order given. Run units in parallel only when the user or the plan they gave explicitly asks for parallel work. A unit that needs another unit's result starts after it, on that unit's branch.
 
-**Model question.** When any unit is `complex`, load the installed `model-picker` skill (`ultrapowers:model-picker` in Claude Code) with these roles:
+**Model question.** Load the installed `model-picker` skill (`ultrapowers:model-picker` in Claude Code) and give it:
 
-- `implementation`: one pick per complex unit, for the worker and its non-review helpers.
-- `review`: the reviewer helpers' models, shared by every unit.
-- `review_budget`: the maximum number of reviewer helpers per unit, fix rechecks included.
+- **Units**: every unit, for its `implementation` pick (the worker and its non-review helpers).
+- **Review task**, only when a unit is complex: the reviewers check complex units' diffs. Default review budget: 2 reviewer helpers per unit, fix rechecks included.
+- **Catalog sources**: `ORCA agent installed --json`, and each installed agent's CLI model list (for example `codex debug models`).
 
-Post one message: one line per unit, `<unit>: simple|complex, <reason>`, then the picker's question. **End your turn and wait for the reply.** Skip the question only when the request names every model or says "use the defaults". A run with only simple units asks nothing.
+Post one message: one line per unit, `<unit>: simple|complex, <reason>`, then the picker's question. **End your turn and wait for the reply.**
 
-## 3. Do or dispatch
+## 3. Dispatch
 
-**Simple unit.** Do it yourself, never in the user's checkout:
+For each unit:
 
-1. `ORCA worktree create --name <unit> --repo <repo> --base-branch <base> --json`.
-2. Edit only in that worktree. Run the repository's checks for the change and fix failures.
-3. If it turns out to need a design choice or more files, make it complex and dispatch a worker to the same worktree.
-
-**Complex unit.** Dispatch one worker:
-
-1. Fill in [the worker brief](references/worker-brief.md) and save it in the scratch directory.
-2. Start it with `ORCA orchestration worker-start --spec-file <brief> --agent <agent> --model <model> --effort <effort>` and a new worktree for the unit. Omit `--model` or `--effort` only for a `null` (inherit) pick.
-3. Check the launch receipt: the requested and effective agent, model, and effort must match the picks.
+1. Fill in [the worker brief](references/worker-brief.md) for its tier and save it in the scratch directory.
+2. Start it with `ORCA orchestration worker-start --spec-file <brief> --agent <agent> --model <model> --effort <effort>` and a new worktree for the unit.
+3. Check the launch receipt: the effective agent, model, and effort must match the picks.
 4. While it runs, answer its `ask` messages. Forward to the user only what needs the user.
+
+**Re-tier.** If a simple worker reports that the unit needs a design choice or more files, stop it and start a complex worker on the same worktree.
 
 **Blocked start.** When Orca reports that a worker is stuck at a prompt (hooks review, approval, trust), show the user the prompt and ask them to answer it in that terminal. Never disable hooks, change sandbox or approval flags, or hand-build a different launch to get past it. If Orca cannot apply the picked model or effort, stop and tell the user.
 
 ## 4. Finish
 
-**Ship.** Every unit ends as a pull request:
-
-1. Commit on the unit's branch, using the installed `commit-style` skill when available.
-2. `git push -u origin <branch>`. Never force-push.
-3. `gh pr create --base <base> --head <branch>`, with the body written by the installed `pr` skill when available.
-
-The base is the branch the user's checkout was on, a dependency's branch, or the base the request names. Workers ship their own unit; you ship simple units. Never merge or enable auto-merge. "No PR" or "local only" means commit only; "don't commit" means leave the change uncommitted. If push or PR creation fails, keep the commit and report the step as blocked.
+Each worker ships its unit as a pull request: commit, push its own branch, open a PR against the base. The base is the branch the user's checkout was on, a dependency's branch, or the base the request names. Nobody merges or enables auto-merge. "No PR" or "local only" means commit only; "don't commit" means leave the change uncommitted.
 
 **Accept.** For each unit, read the diff and the test evidence against its acceptance, and check the PR exists at the reported head SHA. Send any gap back to the worker.
 
@@ -83,4 +73,4 @@ Run this without asking once every unit is accepted and nothing waits on the use
 
 ## Report
 
-For each unit: tier, outcome, PR URL, branch, head SHA, checks run, and the models used (requested and effective). Then the cleanup result: what was removed, what was kept and why.
+For each unit: tier, outcome, PR URL, branch, head SHA, checks run, reviewers used, and the models used (requested and effective). Then the cleanup result: what was removed, what was kept and why.
