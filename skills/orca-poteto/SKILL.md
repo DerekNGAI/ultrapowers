@@ -28,7 +28,7 @@ You are the **coordinator**. You never edit code yourself; Orca workers do. Ever
 | Tier | When | Worker |
 | --- | --- | --- |
 | `simple` | One or two files, an obvious change, a direct check | Plain Orca worker, no poteto, no reviewers |
-| `complex` | Anything else | Orca worker running poteto-mode, then required independent review within the budget |
+| `complex` | Anything else | Orca worker running poteto-mode, with reviewers |
 
 The user's words override the tier: "use poteto" makes it complex, "no poteto" makes it simple.
 
@@ -59,7 +59,7 @@ For each unit:
 
 Each worker ships its unit as a pull request: commit, push its own branch, open a PR against the base. The base is the branch the user's checkout was on, a dependency's branch, or the base the request names. Nobody merges or enables auto-merge. "No PR" or "local only" means commit only; "don't commit" means leave the change uncommitted.
 
-**Accept.** For each unit, read the diff and the test evidence against its acceptance, and check the PR exists at the reported head SHA. For a complex unit, check the report lists its reviewers, their models, and how the findings were resolved. Send any gap back to the worker.
+**Accept.** For each unit, read the diff and the test evidence against its acceptance, and check the PR exists at the reported head SHA. Send any gap back to the worker.
 
 ## 5. Clean up
 
