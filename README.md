@@ -1,6 +1,6 @@
 # ultrapowers
 
-Agent skills for multi-agent work coordinated by Orca, model selection, and atomic commits. Each skill is a folder under `skills/` in the [Agent Skills](https://agentskills.io) format. The repository root is also a Claude Code plugin named `ultrapowers`.
+Version 2.0.0. Agent skills for multi-agent work coordinated by Orca, model selection, and atomic commits. Each skill is a folder under `skills/` in the [Agent Skills](https://agentskills.io) format. The repository root is also a Claude Code plugin named `ultrapowers`.
 
 ## Skills
 

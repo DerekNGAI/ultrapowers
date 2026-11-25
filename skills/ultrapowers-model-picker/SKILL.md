@@ -1,6 +1,8 @@
 ---
 name: ultrapowers-model-picker
 description: Suggest and select the agent, model, and effort for implementation and review before dispatching agents or workers. Use when another skill needs models picked for a run, or when asked to pick or compare models for a task.
+metadata:
+  version: "2.0.0"
 ---
 
 # Model picker

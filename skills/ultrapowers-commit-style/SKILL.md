@@ -1,6 +1,8 @@
 ---
 name: ultrapowers-commit-style
 description: Atomic commits with Conventional Commits messages. Use when creating a git commit, writing or rewording a commit message, or splitting changes into commits.
+metadata:
+  version: "2.0.0"
 ---
 
 # Commit style

@@ -1,5 +1,6 @@
 {
   "name": "ultrapowers",
+  "version": "2.0.0",
   "description": "Orca coordination, model selection, and atomic commits.",
   "author": {
     "name": "DerekNGAI"

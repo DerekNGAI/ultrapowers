@@ -1,6 +1,8 @@
 ---
 name: ultrapowers-orca-poteto
 description: Run implementation work through Orca workers. Size the task and pick models, dispatch a plain worker for simple units and a poteto-mode worker for complex ones, ship each unit as a pull request, then clean up. Use whenever asked to implement, build, fix, refactor, or change code, and for /ultrapowers-orca-poteto.
+metadata:
+  version: "2.0.0"
 ---
 
 # Orca + poteto
