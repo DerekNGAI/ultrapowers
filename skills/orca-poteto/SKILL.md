@@ -28,7 +28,7 @@ You are the **coordinator**. You never edit code yourself; Orca workers do. Ever
 | Tier | When | Worker |
 | --- | --- | --- |
 | `simple` | One or two files, an obvious change, a direct check | Plain Orca worker, no poteto, no reviewers |
-| `complex` | Anything else | Orca worker running poteto-mode, with reviewers |
+| `complex` | Anything else | Orca worker running poteto-mode, which runs its own reviews |
 
 The user's words override the tier: "use poteto" makes it complex, "no poteto" makes it simple.
 
@@ -37,7 +37,8 @@ The user's words override the tier: "use poteto" makes it complex, "no poteto" m
 **Model question.** Load the installed `model-picker` skill (`ultrapowers:model-picker` in Claude Code) and give it:
 
 - **Units**: every unit, for its `implementation` pick (the worker and its non-review helpers).
-- **Review task**, only when a unit is complex: the reviewers check complex units' diffs. Default review budget: 2 reviewer helpers per unit, fix rechecks included.
+- **Review task**, only when a unit is complex: the review models fill poteto's reviewer and panel roles for complex units.
+- **Poteto roles**: every complex unit, so the picker builds its role lines for the brief.
 - **Catalog sources**: `ORCA agent installed --json`, and each installed agent's CLI model list (for example `codex debug models`).
 
 Post one message: one line per unit, `<unit>: simple|complex, <reason>`, then the picker's question. **End your turn and wait for the reply.**
@@ -73,4 +74,4 @@ Run this without asking once every unit is accepted and nothing waits on the use
 
 ## Report
 
-For each unit: tier, outcome, PR URL, branch, head SHA, checks run, reviewers used, and the models used (requested and effective). Then the cleanup result: what was removed, what was kept and why.
+For each unit: tier, outcome, PR URL, branch, head SHA, checks run, helpers used, and the models used (requested and effective). Then the cleanup result: what was removed, what was kept and why.

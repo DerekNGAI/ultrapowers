@@ -16,8 +16,9 @@ WORKTREE    <worktree path, or "the new worktree Orca created for you">, branch 
             Edit nothing outside this worktree.
 
 MODEL       You run on <agent> / <model> / <effort>. Any helper you start uses <model> / <effort>
-            unless a reviewer model is given below. Pass model and effort as options of your
-            subagent tool. If one is rejected, stop and ask; never substitute another model.
+            unless the PSTACK MODELS lines below give its role another model. Pass model and
+            effort as options of your subagent tool. If one is rejected, stop and ask; never
+            substitute another model.
 
 SHIP        Commit on <branch> (commit-style skill if installed). Push only <branch>.
             Open a PR against <base> (pr skill if installed). Never merge, enable auto-merge,
@@ -28,7 +29,7 @@ QUESTIONS   Ask the coordinator with Orca's `ask` command, not a local question 
 
 DONE        Leave the worktree clean. Call `worker_done` with
             --report-path <scratch dir>/<unit>.md containing: branch, head SHA, PR URL,
-            commands run and results, reviewers used with their models, deviations, blockers.
+            commands run and results, helpers used with their roles and models, deviations, blockers.
 ```
 
 ## Simple unit
@@ -42,17 +43,15 @@ WORKFLOW    Do not load poteto-mode. Make the smallest change that meets ACCEPTA
 ## Complex unit
 
 ```
-WORKFLOW    Read <absolute path to poteto-mode/SKILL.md> in full. Follow its per-unit playbook
-            for this task (Feature, Bug fix, or Refactoring), including its prescribed reviews,
-            and its Opening a PR playbook. Do not run its Orchestrate or Autopilot playbooks.
+WORKFLOW    Read <absolute path to poteto-mode/SKILL.md> in full and follow it: pick the playbook
+            that matches this task and run it as written, through its Opening a PR playbook.
+            Orca coordinates units, so do not run its Autopilot-full or Autopilot-stack playbooks.
 
-REVIEWERS   <review model / effort, one per line>
-            These replace poteto's reviewer models (pstack-models.mdc lines and built-in slugs)
-            for interrogate adversaries, review panels, arena cross-judges, and fix rechecks.
-            Give each panel seat a different model from this list while models remain.
-            All other poteto roles, including arena runners, use the MODEL line.
+PSTACK MODELS
+            These are your pstack-models.mdc lines for this run. They override poteto's role
+            defaults and any pstack-models.mdc file.
+            <the unit's poteto role lines from model-picker>
 
-HELPERS     This task asks you to use subagents. Start poteto's helpers, with at most
-            <review_budget> reviewer helpers in total, fix rechecks included. When the budget is
-            short, merge review axes into one reviewer and report the cut as a deviation.
+SUBAGENTS   This task asks you to use subagents. Start poteto's helpers wherever its playbooks
+            call for them.
 ```
